@@ -7,6 +7,16 @@ document.addEventListener('DOMContentLoaded', () => {
     App.init();
 });
 
+// 안전한 DOM 텍스트 설정 헬퍼
+function setSafeText(id, text) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = text;
+}
+function setSafeHtml(id, html) {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = html;
+}
+
 const App = {
     currentTab: 'summary',
     currentPreset: 'balanced',
@@ -53,7 +63,7 @@ const App = {
         if (tipsSlider) {
             tipsSlider.addEventListener('input', (e) => {
                 const val = parseFloat(e.target.value);
-                document.getElementById('sim-tips-val').textContent = val.toFixed(2) + '%';
+                setSafeText('sim-tips-val', val.toFixed(2) + '%');
                 this.overrideValues['us10y_tips'] = val;
                 this.renderScoreAndSignal();
             });
@@ -63,7 +73,7 @@ const App = {
         if (dxySlider) {
             dxySlider.addEventListener('input', (e) => {
                 const val = parseFloat(e.target.value);
-                document.getElementById('sim-dxy-val').textContent = val.toFixed(1);
+                setSafeText('sim-dxy-val', val.toFixed(1));
                 this.overrideValues['dxy'] = val;
                 this.renderScoreAndSignal();
             });
@@ -73,7 +83,7 @@ const App = {
         if (usdkrwSlider) {
             usdkrwSlider.addEventListener('input', (e) => {
                 const val = parseFloat(e.target.value);
-                document.getElementById('sim-usdkrw-val').textContent = val.toLocaleString() + '원';
+                setSafeText('sim-usdkrw-val', val.toLocaleString() + '원');
                 this.overrideValues['usdkrw'] = val;
                 this.renderScoreAndSignal();
             });
@@ -83,7 +93,7 @@ const App = {
         if (cbSlider) {
             cbSlider.addEventListener('input', (e) => {
                 const val = parseInt(e.target.value);
-                document.getElementById('sim-cb-val').textContent = val + '톤';
+                setSafeText('sim-cb-val', val + '톤');
                 this.overrideValues['central_bank_net_buys'] = val;
                 this.renderScoreAndSignal();
             });
@@ -94,10 +104,10 @@ const App = {
         if (resetSimBtn) {
             resetSimBtn.addEventListener('click', () => {
                 this.overrideValues = {};
-                if (tipsSlider) { tipsSlider.value = 1.88; document.getElementById('sim-tips-val').textContent = '1.88%'; }
-                if (dxySlider) { dxySlider.value = 104.1; document.getElementById('sim-dxy-val').textContent = '104.1'; }
-                if (usdkrwSlider) { usdkrwSlider.value = 1392; document.getElementById('sim-usdkrw-val').textContent = '1,392원'; }
-                if (cbSlider) { cbSlider.value = 290; document.getElementById('sim-cb-val').textContent = '290톤'; }
+                if (tipsSlider) { tipsSlider.value = 1.88; setSafeText('sim-tips-val', '1.88%'); }
+                if (dxySlider) { dxySlider.value = 104.1; setSafeText('sim-dxy-val', '104.1'); }
+                if (usdkrwSlider) { usdkrwSlider.value = 1392; setSafeText('sim-usdkrw-val', '1,392원'); }
+                if (cbSlider) { cbSlider.value = 290; setSafeText('sim-cb-val', '290톤'); }
                 this.renderScoreAndSignal();
             });
         }
@@ -121,27 +131,23 @@ const App = {
     },
 
     renderAll() {
-        this.renderTicker();
-        this.renderScoreAndSignal();
-        this.renderCategoryCards();
-        this.renderCalendarAndTips();
+        try { this.renderTicker(); } catch (e) { console.error('renderTicker error:', e); }
+        try { this.renderScoreAndSignal(); } catch (e) { console.error('renderScoreAndSignal error:', e); }
+        try { this.renderCategoryCards(); } catch (e) { console.error('renderCategoryCards error:', e); }
+        try { this.renderCalendarAndTips(); } catch (e) { console.error('renderCalendarAndTips error:', e); }
     },
 
     renderTicker() {
         const meta = GOLD_DATA.meta;
-        document.getElementById('ticker-gold-usd').textContent = `$${meta.goldUSD.toLocaleString()}`;
-        document.getElementById('ticker-gold-krw-g').textContent = `${meta.goldKRW_g.toLocaleString()}원`;
-        document.getElementById('ticker-gold-krw-don').textContent = `${meta.goldKRW_don.toLocaleString()}원`;
-        document.getElementById('ticker-usdkrw').textContent = `${meta.usdkrw.toLocaleString()}원`;
-        document.getElementById('ticker-dxy').textContent = meta.dxy.toFixed(2);
-        document.getElementById('ticker-us10y').textContent = `${meta.us10y}%`;
-        document.getElementById('ticker-tips').textContent = `${meta.us10yTips}%`;
-        
-        // 상단 헤더 및 계기판 카드 마지막 업데이트 시간 갱신
-        const headerUpdated = document.getElementById('header-last-updated');
-        if (headerUpdated) headerUpdated.textContent = meta.updatedAt;
-        const tickerUpdated = document.getElementById('ticker-updated-at');
-        if (tickerUpdated) tickerUpdated.textContent = meta.updatedAt;
+        setSafeText('ticker-gold-usd', `$${meta.goldUSD.toLocaleString()}`);
+        setSafeText('ticker-gold-krw-g', `${meta.goldKRW_g.toLocaleString()}원`);
+        setSafeText('ticker-gold-krw-don', `${meta.goldKRW_don.toLocaleString()}원`);
+        setSafeText('ticker-usdkrw', `${meta.usdkrw.toLocaleString()}원`);
+        setSafeText('ticker-dxy', meta.dxy.toFixed(2));
+        setSafeText('ticker-us10y', `${meta.us10y}%`);
+        setSafeText('ticker-tips', `${meta.us10yTips}%`);
+        setSafeText('header-last-updated', meta.updatedAt);
+        setSafeText('ticker-updated-at', meta.updatedAt);
     },
 
     renderScoreAndSignal() {
@@ -150,15 +156,19 @@ const App = {
 
         // 점수 및 신호 텍스트
         const scoreEl = document.getElementById('final-score-display');
-        scoreEl.textContent = (finalScore > 0 ? '+' : '') + finalScore;
-        scoreEl.className = `text-5xl font-black ${finalScore >= 20 ? 'text-emerald-400' : (finalScore <= -20 ? 'text-rose-400' : 'text-amber-400')}`;
+        if (scoreEl) {
+            scoreEl.textContent = (finalScore > 0 ? '+' : '') + finalScore;
+            scoreEl.className = `text-5xl font-black ${finalScore >= 20 ? 'text-emerald-400' : (finalScore <= -20 ? 'text-rose-400' : 'text-amber-400')}`;
+        }
 
         const signalBadge = document.getElementById('signal-badge');
-        signalBadge.className = `inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-bold border ${signal.badgeClass}`;
-        signalBadge.innerHTML = `<i data-lucide="${signal.icon}" class="w-4 h-4"></i> ${signal.korean}`;
+        if (signalBadge) {
+            signalBadge.className = `inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-bold border ${signal.badgeClass}`;
+            signalBadge.innerHTML = `<i data-lucide="${signal.icon}" class="w-4 h-4"></i> ${signal.korean}`;
+        }
 
-        document.getElementById('signal-summary').textContent = signal.summary;
-        document.getElementById('signal-recommendation').textContent = signal.recommendation;
+        setSafeText('signal-summary', signal.summary);
+        setSafeText('signal-recommendation', signal.recommendation);
 
         // 게이지 바늘 회전 (-100 -> -90deg, 0 -> 0deg, +100 -> +90deg)
         const needle = document.getElementById('gauge-needle');
@@ -200,9 +210,9 @@ const App = {
         }
 
         // 전략 액션 플랜
-        document.getElementById('target-allocation-text').textContent = actionPlan.targetAllocation;
-        document.getElementById('domestic-strategy-text').innerHTML = actionPlan.domesticStrategy;
-        document.getElementById('timing-advice-text').textContent = actionPlan.timingAdvice;
+        setSafeText('target-allocation-text', actionPlan.targetAllocation);
+        setSafeHtml('domestic-strategy-text', actionPlan.domesticStrategy);
+        setSafeText('timing-advice-text', actionPlan.timingAdvice);
 
         // 레이더 차트 갱신
         GoldCharts.initRadarChart('radar-chart-canvas', categoryScores);
