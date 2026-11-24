@@ -22,6 +22,8 @@ jobs:
           python-version: '3.11'
 
       - name: 최신 금 시세 및 거시경제 지표 수집
+        env:
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
         run: |
           python scripts/fetch_latest_data.py
 

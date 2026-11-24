@@ -19,6 +19,22 @@
 
 ---
 
+## 🔑 GitHub에 FRED API Key 등록하기 (매일 완전 자동 갱신)
+
+매번 브라우저에서 API 키를 입력할 필요 없이, GitHub에 암호화된 비밀값(Secret)으로 한 번만 등록해 두시면 매일 아침 GitHub 가상머신이 연준 공식 API를 호출하여 최신 지표를 자동 수집합니다.
+
+1. [FRED API Key 무료 발급](https://fredaccount.stlouisfed.org/apikeys)에서 1분 만에 무료 키를 발급받습니다.
+2. 본인의 GitHub 저장소 페이지(`https://github.com/swimmingboy-all/gold-investment-app`)로 이동합니다.
+3. 상단 메뉴의 **Settings (설정)** 탭을 클릭합니다.
+4. 좌측 사이드바에서 **Secrets and variables** → **Actions**를 클릭합니다.
+5. **New repository secret** 초록색 버튼을 클릭합니다.
+   - **Name**: `FRED_API_KEY` 입력 (대소문자 정확히)
+   - **Secret**: 발급받은 FRED API 키 붙여넣기
+   - **Add secret** 클릭
+6. 이제 완료되었습니다! 매일 아침 뉴욕 증시 마감 후 GitHub Actions가 이 키를 사용하여 10년 TIPS 실질금리, 기대인플레, 장단기 금리차, VIX를 자동으로 웹앱에 갱신합니다.
+
+---
+
 ## 📊 8대 핵심 관찰 지표 체계
 
 | 카테고리 | 주요 지표 | 금 가격 영향 | 가중치 |

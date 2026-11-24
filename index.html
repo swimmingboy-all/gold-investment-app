@@ -122,9 +122,13 @@
                         무료 키 발급: <a href="https://fredaccount.stlouisfed.org/apikeys" target="_blank" rel="noopener noreferrer" class="text-cyan-400 underline">FRED API Keys 발급 페이지 (클릭)</a>
                     </p>
                 </div>
-                <div class="bg-slate-800/60 p-3 rounded-lg border border-slate-700/60 text-[11px] text-slate-400 space-y-1">
-                    <div class="text-amber-400 font-semibold">🤖 GitHub Actions 일일 자동 업데이트 활성화됨</div>
-                    <p>본 저장소에는 매일 아침 뉴욕 증시 마감 후 자동으로 최신 거시경제 지표를 수집하여 웹앱에 반영하는 자동화 로봇(`.github/workflows/daily-update.yml`)이 탑재되어 있습니다.</p>
+                <div class="bg-slate-800/60 p-3.5 rounded-lg border border-slate-700/60 text-[11px] text-slate-300 space-y-2">
+                    <div class="text-amber-400 font-bold flex items-center gap-1.5">
+                        <i data-lucide="shield-check" class="w-4 h-4 text-emerald-400"></i> 가장 편리한 방법: GitHub Secrets에 한 번만 등록하기
+                    </div>
+                    <p class="text-slate-400 leading-relaxed">
+                        매번 브라우저에 입력할 필요 없이, GitHub 저장소의 <strong class="text-slate-200">Settings → Secrets and variables → Actions</strong>에서 <code class="text-amber-300 bg-slate-900 px-1.5 py-0.5 rounded">FRED_API_KEY</code> 이름으로 등록해 두시면, 매일 아침 GitHub 가상머신이 연준 공식 API를 통해 자동으로 최신 지표를 수집하여 웹앱에 반영합니다.
+                    </p>
                 </div>
             </div>
 
