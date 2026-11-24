@@ -21,9 +21,51 @@ const App = {
         if (window.lucide) {
             lucide.createIcons();
         }
+        // 페이지 로드 시 백그라운드로 실시간 시세(환율, 금값) 자동 동기화 시도
+        this.triggerLiveSync(false);
     },
 
     bindEvents() {
+        // 실시간 시세 동기화 버튼 이벤트
+        const syncBtn = document.getElementById('sync-live-data-btn');
+        if (syncBtn) {
+            syncBtn.addEventListener('click', () => {
+                this.triggerLiveSync(true);
+            });
+        }
+
+        // API 설정 모달 열기/닫기
+        const openApiModalBtn = document.getElementById('open-api-modal-btn');
+        const closeApiModalBtn = document.getElementById('close-api-modal-btn');
+        const apiModal = document.getElementById('api-modal');
+        const saveApiKeyBtn = document.getElementById('save-api-key-btn');
+        const apiKeyInput = document.getElementById('input-fred-api-key');
+
+        if (openApiModalBtn && apiModal) {
+            openApiModalBtn.addEventListener('click', () => {
+                if (apiKeyInput && window.GoldApiService) {
+                    apiKeyInput.value = GoldApiService.getFredApiKey();
+                }
+                apiModal.classList.remove('hidden');
+            });
+        }
+
+        if (closeApiModalBtn && apiModal) {
+            closeApiModalBtn.addEventListener('click', () => {
+                apiModal.classList.add('hidden');
+            });
+        }
+
+        if (saveApiKeyBtn && apiKeyInput && apiModal) {
+            saveApiKeyBtn.addEventListener('click', () => {
+                if (window.GoldApiService) {
+                    GoldApiService.setFredApiKey(apiKeyInput.value);
+                }
+                apiModal.classList.add('hidden');
+                this.triggerLiveSync(true);
+            });
+        }
+
         // 탭 전환 이벤트
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -411,5 +453,36 @@ const App = {
 
         document.getElementById('active-preset-desc').textContent = `${preset.name}: ${preset.description}`;
         this.renderScoreAndSignal();
+    },
+
+    async triggerLiveSync(showFeedback = true) {
+        if (!window.GoldApiService) return;
+
+        const syncIcon = document.getElementById('sync-icon');
+        if (syncIcon) {
+            syncIcon.classList.add('animate-spin');
+        }
+
+        try {
+            const res = await GoldApiService.syncAllLiveData();
+            this.renderAll();
+
+            if (showFeedback) {
+                if (res.updatedItems.length > 0) {
+                    alert(`✅ 실시간 데이터 동기화 완료!\n\n반영된 항목:\n• ${res.updatedItems.join('\n• ')}`);
+                } else {
+                    alert('네트워크 상태를 확인해주세요. 기본 데이터셋이 유지됩니다.');
+                }
+            }
+        } catch (e) {
+            console.error('동기화 오류:', e);
+            if (showFeedback) {
+                alert('실시간 데이터를 불러오는 중 오류가 발생했습니다.');
+            }
+        } finally {
+            if (syncIcon) {
+                syncIcon.classList.remove('animate-spin');
+            }
+        }
     }
 };
