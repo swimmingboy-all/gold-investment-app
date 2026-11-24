@@ -1,18 +1,10 @@
 /**
  * apiService.js
- * 실시간 금 시세, 환율 및 거시경제 공공 API 연동 모듈
+ * 실시간 금 시세 및 환율 자동 동기화 모듈 (API 키 불필요)
+ * 거시경제 지표(TIPS, BEI 등)는 GitHub Actions가 Secrets를 통해 매일 자동 갱신합니다.
  */
 
 const GoldApiService = {
-    // 로컬 스토리지에 저장된 FRED API 키
-    getFredApiKey() {
-        return localStorage.getItem('gold_fred_api_key') || '';
-    },
-
-    setFredApiKey(key) {
-        localStorage.setItem('gold_fred_api_key', key.trim());
-    },
-
     /**
      * 실시간 환율 (USD/KRW) 조회
      * Open Exchange Rates 무료 공용 엔드포인트 활용 (API 키 불필요)
@@ -59,7 +51,7 @@ const GoldApiService = {
             console.warn('실시간 금 시세 1차 API 조회 실패:', e);
         }
 
-        // 백업 엔드포인트
+        // 2차 백업 엔드포인트 (Binance PAXG)
         try {
             const res2 = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=PAXGUSDT');
             if (res2.ok) {
@@ -77,34 +69,6 @@ const GoldApiService = {
     },
 
     /**
-     * FRED (세인트루이스 연준) API를 통한 공식 거시경제 최신 지표 조회
-     * (사용자가 무료 API 키를 등록했을 때 활성화)
-     */
-    async fetchFredSeries(seriesId) {
-        const apiKey = this.getFredApiKey();
-        if (!apiKey) return null;
-
-        try {
-            // FRED API 엔드포인트 (JSON)
-            const url = `https://api.stlouisfed.org/fred/series/observations?series_id=${seriesId}&api_key=${apiKey}&file_type=json&sort_order=desc&limit=1`;
-            const res = await fetch(url);
-            if (res.ok) {
-                const data = await res.json();
-                if (data.observations && data.observations.length > 0) {
-                    const obs = data.observations[0];
-                    const val = parseFloat(obs.value);
-                    if (!isNaN(val)) {
-                        return { value: val, date: obs.date };
-                    }
-                }
-            }
-        } catch (e) {
-            console.warn(`FRED API 조회 실패 (${seriesId}):`, e);
-        }
-        return null;
-    },
-
-    /**
      * 모든 실시간 데이터 일괄 동기화 실행
      */
     async syncAllLiveData() {
@@ -113,7 +77,7 @@ const GoldApiService = {
             errors: []
         };
 
-        // 1. 환율 동기화
+        // 1. 실시간 환율 동기화
         const fx = await this.fetchUsdKrw();
         if (fx.success && fx.rate) {
             GOLD_DATA.meta.usdkrw = fx.rate;
@@ -126,53 +90,17 @@ const GoldApiService = {
             }
         }
 
-        // 2. 금 시세 동기화
+        // 2. 실시간 국제 금 시세 동기화
         const gold = await this.fetchLiveGoldPrice();
         if (gold.success && gold.goldUSD) {
             GOLD_DATA.meta.goldUSD = gold.goldUSD;
-            // 국내 금값(1g, 돈당) 재계산 (국제금값 / 31.1035g * 환율)
+            // 국내 금값(1g, 돈당) 자동 계산 (국제금값 / 31.1035g * 환율)
             const krwPerGram = Math.round((gold.goldUSD / 31.1034768) * GOLD_DATA.meta.usdkrw);
             const krwPerDon = Math.round(krwPerGram * 3.75);
             GOLD_DATA.meta.goldKRW_g = krwPerGram;
             GOLD_DATA.meta.goldKRW_don = krwPerDon;
             results.updatedItems.push(`국제 금 시세 ($${gold.goldUSD.toLocaleString()}/oz)`);
-        }
-
-        // 3. FRED API 키가 있는 경우 연준 지표 동기화
-        if (this.getFredApiKey()) {
-            // 10년 TIPS 실질금리 (DFII10)
-            const tips = await this.fetchFredSeries('DFII10');
-            if (tips) {
-                GOLD_DATA.meta.us10yTips = tips.value;
-                const tipsInd = GOLD_DATA.categories.realRate.indicators.find(i => i.id === 'us10y_tips');
-                if (tipsInd) tipsInd.currentValue = tips.value;
-                results.updatedItems.push(`10년 TIPS 실질금리 (${tips.value}%)`);
-            }
-
-            // 10년 명목 국채금리 (DGS10)
-            const dgs10 = await this.fetchFredSeries('DGS10');
-            if (dgs10) {
-                GOLD_DATA.meta.us10y = dgs10.value;
-                const dgsInd = GOLD_DATA.categories.realRate.indicators.find(i => i.id === 'us10y_nominal');
-                if (dgsInd) dgsInd.currentValue = dgs10.value;
-                results.updatedItems.push(`10년 명목국채 (${dgs10.value}%)`);
-            }
-
-            // 10년 기대인플레 (T10YIE)
-            const bei = await this.fetchFredSeries('T10YIE');
-            if (bei) {
-                const beiInd = GOLD_DATA.categories.realRate.indicators.find(i => i.id === 'bei_10y');
-                if (beiInd) beiInd.currentValue = bei.value;
-                results.updatedItems.push(`10년 기대인플레 (${bei.value}%)`);
-            }
-
-            // 장단기 금리차 (T10Y2Y)
-            const t10y2y = await this.fetchFredSeries('T10Y2Y');
-            if (t10y2y) {
-                const ycInd = GOLD_DATA.categories.macroLabor.indicators.find(i => i.id === 'yield_curve_10y2y');
-                if (ycInd) ycInd.currentValue = t10y2y.value;
-                results.updatedItems.push(`10Y-2Y 금리차 (${t10y2y.value}%p)`);
-            }
+            results.updatedItems.push(`국내 금값 환산 (g당 ${krwPerGram.toLocaleString()}원 / 돈당 ${krwPerDon.toLocaleString()}원)`);
         }
 
         // 업데이트 일시 갱신

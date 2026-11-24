@@ -34,38 +34,6 @@ const App = {
             });
         }
 
-        // API 설정 모달 열기/닫기
-        const openApiModalBtn = document.getElementById('open-api-modal-btn');
-        const closeApiModalBtn = document.getElementById('close-api-modal-btn');
-        const apiModal = document.getElementById('api-modal');
-        const saveApiKeyBtn = document.getElementById('save-api-key-btn');
-        const apiKeyInput = document.getElementById('input-fred-api-key');
-
-        if (openApiModalBtn && apiModal) {
-            openApiModalBtn.addEventListener('click', () => {
-                if (apiKeyInput && window.GoldApiService) {
-                    apiKeyInput.value = GoldApiService.getFredApiKey();
-                }
-                apiModal.classList.remove('hidden');
-            });
-        }
-
-        if (closeApiModalBtn && apiModal) {
-            closeApiModalBtn.addEventListener('click', () => {
-                apiModal.classList.add('hidden');
-            });
-        }
-
-        if (saveApiKeyBtn && apiKeyInput && apiModal) {
-            saveApiKeyBtn.addEventListener('click', () => {
-                if (window.GoldApiService) {
-                    GoldApiService.setFredApiKey(apiKeyInput.value);
-                }
-                apiModal.classList.add('hidden');
-                this.triggerLiveSync(true);
-            });
-        }
-
         // 탭 전환 이벤트
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
