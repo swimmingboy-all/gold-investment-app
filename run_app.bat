@@ -1,8 +1,8 @@
 @echo off
-chcp 65001 > nul
+title Launch Gold Matrix
+cls
 echo ========================================================
-echo  Gold Matrix - 금 투자 지표 관찰 및 매수/매도 판단 웹앱
+echo  Launching Gold Matrix Web App in default browser...
 echo ========================================================
-echo 브라우저로 웹앱을 직접 실행합니다...
 start "" "%~dp0index.html"
-echo 완료되었습니다.
+exit
