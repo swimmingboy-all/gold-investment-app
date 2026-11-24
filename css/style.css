@@ -1,0 +1,141 @@
+/* style.css - 골드 인베스트먼트 대시보드 커스텀 스타일 */
+
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+
+:root {
+    --gold-primary: #f59e0b;
+    --gold-light: #fbbf24;
+    --gold-dark: #b45309;
+    --bg-main: #0a0e17;
+    --bg-card: #111827;
+    --bg-card-hover: #1f2937;
+    --border-color: rgba(255, 255, 255, 0.08);
+    --border-gold: rgba(245, 158, 11, 0.3);
+}
+
+body {
+    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+    background-color: var(--bg-main);
+    color: #e2e8f0;
+    overflow-x: hidden;
+}
+
+/* 스크롤바 커스텀 */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: #0f172a;
+}
+::-webkit-scrollbar-thumb {
+    background: #334155;
+    border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #f59e0b;
+}
+
+/* 골드 그라디언트 텍스트 */
+.text-gold-gradient {
+    background: linear-gradient(135deg, #fef08a 0%, #fbbf24 50%, #d97706 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* 글로우 효과 */
+.gold-glow {
+    box-shadow: 0 0 25px rgba(245, 158, 11, 0.15);
+}
+
+.gold-glow-lg {
+    box-shadow: 0 0 45px rgba(245, 158, 11, 0.25);
+}
+
+/* 게이지 바 스타일 */
+.gauge-meter-wrapper {
+    position: relative;
+    width: 240px;
+    height: 120px;
+    overflow: hidden;
+    margin: 0 auto;
+}
+
+.gauge-meter-bg {
+    width: 240px;
+    height: 240px;
+    border-radius: 50%;
+    border: 20px solid #1e293b;
+    border-bottom-color: transparent;
+    border-left-color: transparent;
+    transform: rotate(45deg);
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+.gauge-needle {
+    position: absolute;
+    width: 4px;
+    height: 95px;
+    background: #fbbf24;
+    bottom: 0;
+    left: 118px;
+    transform-origin: bottom center;
+    transition: transform 1.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 0 8px #fbbf24;
+    border-radius: 2px;
+}
+
+.gauge-needle-cap {
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    background: #d97706;
+    border: 3px solid #fef08a;
+    border-radius: 50%;
+    bottom: -9px;
+    left: 111px;
+    z-index: 5;
+}
+
+/* 카드 및 호버 트랜지션 */
+.glass-card {
+    background: rgba(17, 24, 39, 0.85);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--border-color);
+    transition: all 0.25s ease;
+}
+
+.glass-card:hover {
+    border-color: rgba(245, 158, 11, 0.35);
+    transform: translateY(-2px);
+}
+
+/* 탭 활성화 상태 */
+.tab-btn.active {
+    background: rgba(245, 158, 11, 0.15);
+    color: #fbbf24;
+    border-color: #f59e0b;
+}
+
+/* 인쇄용 스타일 */
+@media print {
+    body {
+        background-color: #ffffff;
+        color: #000000;
+    }
+    .no-print {
+        display: none !important;
+    }
+    .glass-card {
+        background: #ffffff !important;
+        border: 1px solid #cccccc !important;
+        color: #000000 !important;
+        box-shadow: none !important;
+    }
+    .text-gold-gradient {
+        color: #b45309 !important;
+        -webkit-text-fill-color: initial !important;
+    }
+}
