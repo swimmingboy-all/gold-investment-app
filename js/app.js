@@ -138,7 +138,12 @@ const App = {
         document.getElementById('ticker-dxy').textContent = meta.dxy.toFixed(2);
         document.getElementById('ticker-us10y').textContent = `${meta.us10y}%`;
         document.getElementById('ticker-tips').textContent = `${meta.us10yTips}%`;
-        document.getElementById('ticker-updated-at').textContent = meta.updatedAt;
+        
+        // 상단 헤더 및 계기판 카드 마지막 업데이트 시간 갱신
+        const headerUpdated = document.getElementById('header-last-updated');
+        if (headerUpdated) headerUpdated.textContent = meta.updatedAt;
+        const tickerUpdated = document.getElementById('ticker-updated-at');
+        if (tickerUpdated) tickerUpdated.textContent = meta.updatedAt;
     },
 
     renderScoreAndSignal() {

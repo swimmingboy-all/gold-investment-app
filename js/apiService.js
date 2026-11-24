@@ -103,9 +103,10 @@ const GoldApiService = {
             results.updatedItems.push(`국내 금값 환산 (g당 ${krwPerGram.toLocaleString()}원 / 돈당 ${krwPerDon.toLocaleString()}원)`);
         }
 
-        // 업데이트 일시 갱신
+        // 업데이트 일시 갱신 (초 단위 정밀 기록)
         const now = new Date();
-        const timeStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} (실시간 API 동기화됨)`;
+        const pad = (n) => String(n).padStart(2, '0');
+        const timeStr = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())} (실시간 동기화)`;
         GOLD_DATA.meta.updatedAt = timeStr;
 
         return results;

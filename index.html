@@ -82,8 +82,16 @@
                 </div>
             </div>
 
-            <!-- 유틸리티 버튼 -->
-            <div class="flex items-center gap-2 no-print">
+            <!-- 유틸리티 버튼 & 마지막 업데이트 시간 -->
+            <div class="flex items-center gap-2.5 no-print">
+                <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700/60 text-xs shadow-inner">
+                    <span class="relative flex h-2 w-2">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    </span>
+                    <span class="text-slate-400 text-[11px]">마지막 업데이트:</span>
+                    <strong id="header-last-updated" class="text-amber-400 font-mono text-xs font-semibold">2026-11-24 22:05:00</strong>
+                </div>
                 <button id="sync-live-data-btn" class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 flex items-center gap-1.5 shadow-md shadow-amber-500/20 transition">
                     <i data-lucide="refresh-cw" class="w-3.5 h-3.5" id="sync-icon"></i> 실시간 시세 동기화
                 </button>
