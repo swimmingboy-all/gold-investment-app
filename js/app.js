@@ -21,8 +21,6 @@ const App = {
         if (window.lucide) {
             lucide.createIcons();
         }
-        // 페이지 로드 시 백그라운드로 실시간 시세(환율, 금값) 자동 동기화 시도
-        this.triggerLiveSync(false);
     },
 
     bindEvents() {
