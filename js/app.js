@@ -412,11 +412,8 @@ const App = {
                 if (window.lucide) lucide.createIcons();
             }, 60);
 
-            // 네비게이션 바로 부드럽게 스크롤
-            const nav = document.querySelector('nav');
-            if (nav) {
-                nav.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            }
+            // 최상단으로 부드럽게 스크롤
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         if (window.lucide) lucide.createIcons();

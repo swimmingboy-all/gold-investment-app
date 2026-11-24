@@ -23,6 +23,7 @@ const GoldCharts = {
      * 레이더 차트 (카테고리별 스코어 분포)
      */
     initRadarChart(canvasId, categoryScores) {
+        if (typeof Chart === 'undefined') return;
         const ctx = document.getElementById(canvasId);
         if (!ctx) return;
 
@@ -87,6 +88,7 @@ const GoldCharts = {
      * 10년 TIPS 실질금리 vs 국제 금 가격 (듀얼 축 차트)
      */
     initRealRateChart(canvasId) {
+        if (typeof Chart === 'undefined') return;
         const ctx = document.getElementById(canvasId);
         if (!ctx) return;
         if (this.instances[canvasId]) this.instances[canvasId].destroy();
@@ -161,6 +163,7 @@ const GoldCharts = {
      * 달러 인덱스 (DXY) vs 원/달러 환율
      */
     initDollarChart(canvasId) {
+        if (typeof Chart === 'undefined') return;
         const ctx = document.getElementById(canvasId);
         if (!ctx) return;
         if (this.instances[canvasId]) this.instances[canvasId].destroy();
@@ -218,6 +221,7 @@ const GoldCharts = {
      * 중앙은행 순매입 및 글로벌 ETF 자금 흐름 바 차트
      */
     initSupplyChart(canvasId) {
+        if (typeof Chart === 'undefined') return;
         const ctx = document.getElementById(canvasId);
         if (!ctx) return;
         if (this.instances[canvasId]) this.instances[canvasId].destroy();
@@ -279,6 +283,7 @@ const GoldCharts = {
      * 장단기 금리차 (10Y-2Y) 추이 및 경기침체 신호
      */
     initYieldCurveChart(canvasId) {
+        if (typeof Chart === 'undefined') return;
         const ctx = document.getElementById(canvasId);
         if (!ctx) return;
         if (this.instances[canvasId]) this.instances[canvasId].destroy();
@@ -331,6 +336,7 @@ const GoldCharts = {
      * 상대 가치: 금/은 비율 및 금/구리 비율
      */
     initRelativeChart(canvasId) {
+        if (typeof Chart === 'undefined') return;
         const ctx = document.getElementById(canvasId);
         if (!ctx) return;
         if (this.instances[canvasId]) this.instances[canvasId].destroy();
@@ -385,6 +391,7 @@ const GoldCharts = {
      * 인플레이션: CPI vs Core PCE 시계열 차트
      */
     initInflationChart(canvasId) {
+        if (typeof Chart === 'undefined') return;
         const ctx = document.getElementById(canvasId);
         if (!ctx) return;
         if (this.instances[canvasId]) this.instances[canvasId].destroy();
@@ -435,6 +442,7 @@ const GoldCharts = {
      * 위험 및 시장 심리: VIX vs 지정학 리스크 GPR 차트
      */
     initRiskChart(canvasId) {
+        if (typeof Chart === 'undefined') return;
         const ctx = document.getElementById(canvasId);
         if (!ctx) return;
         if (this.instances[canvasId]) this.instances[canvasId].destroy();
