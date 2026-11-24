@@ -381,6 +381,143 @@ const GoldCharts = {
                 plugins: { legend: { labels: { color: this.theme.textColor } } }
             }
         });
+    /**
+     * 인플레이션: CPI vs Core PCE 시계열 차트
+     */
+    initInflationChart(canvasId) {
+        const ctx = document.getElementById(canvasId);
+        if (!ctx) return;
+        if (this.instances[canvasId]) this.instances[canvasId].destroy();
+
+        const history = GOLD_DATA.categories.inflation.history;
+
+        this.instances[canvasId] = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: history.labels,
+                datasets: [
+                    {
+                        label: '미국 소비자물가지수 (CPI YoY %)',
+                        data: history.cpi,
+                        borderColor: '#f97316',
+                        backgroundColor: 'rgba(249, 115, 22, 0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        borderWidth: 2
+                    },
+                    {
+                        label: '미국 근원 PCE 물가지수 (Core PCE %)',
+                        data: history.corePce,
+                        borderColor: '#fbbf24',
+                        borderDash: [5, 5],
+                        tension: 0.3,
+                        borderWidth: 2
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { grid: { color: this.theme.gridColor }, ticks: { color: this.theme.textColor } },
+                    y: {
+                        grid: { color: this.theme.gridColor },
+                        ticks: { color: this.theme.textColor, callback: v => v + '%' },
+                        title: { display: true, text: '물가 상승률 (%)', color: this.theme.textColor }
+                    }
+                },
+                plugins: { legend: { labels: { color: this.theme.textColor } } }
+            }
+        });
+    },
+
+    /**
+     * 위험 및 시장 심리: VIX vs 지정학 리스크 GPR 차트
+     */
+    initRiskChart(canvasId) {
+        const ctx = document.getElementById(canvasId);
+        if (!ctx) return;
+        if (this.instances[canvasId]) this.instances[canvasId].destroy();
+
+        const history = GOLD_DATA.categories.riskSentiment.history;
+
+        this.instances[canvasId] = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: history.labels,
+                datasets: [
+                    {
+                        label: 'CBOE VIX 지수',
+                        data: history.vix,
+                        borderColor: '#ef4444',
+                        yAxisID: 'yVix',
+                        tension: 0.3,
+                        borderWidth: 2
+                    },
+                    {
+                        label: '지정학 리스크 지수 (GPR)',
+                        data: history.gpr,
+                        borderColor: '#eab308',
+                        yAxisID: 'yGpr',
+                        tension: 0.3,
+                        borderWidth: 2
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { grid: { color: this.theme.gridColor }, ticks: { color: this.theme.textColor } },
+                    yVix: {
+                        position: 'left',
+                        grid: { color: this.theme.gridColor },
+                        ticks: { color: '#ef4444' },
+                        title: { display: true, text: 'VIX (pt)', color: '#ef4444' }
+                    },
+                    yGpr: {
+                        position: 'right',
+                        grid: { drawOnChartArea: false },
+                        ticks: { color: '#eab308' },
+                        title: { display: true, text: 'GPR Index', color: '#eab308' }
+                    }
+                },
+                plugins: { legend: { labels: { color: this.theme.textColor } } }
+            }
+        });
+    },
+
+    /**
+     * 카테고리별 차트 동적 생성 및 리사이즈
+     */
+    renderChartByCategory(categoryKey) {
+        const canvasId = `chart-${categoryKey}`;
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return;
+
+        switch (categoryKey) {
+            case 'realRate':
+                this.initRealRateChart(canvasId);
+                break;
+            case 'dollar':
+                this.initDollarChart(canvasId);
+                break;
+            case 'supplyDemand':
+                this.initSupplyChart(canvasId);
+                break;
+            case 'inflation':
+                this.initInflationChart(canvasId);
+                break;
+            case 'macroLabor':
+                this.initYieldCurveChart(canvasId);
+                break;
+            case 'riskSentiment':
+                this.initRiskChart(canvasId);
+                break;
+            case 'relativeValuation':
+                this.initRelativeChart(canvasId);
+                break;
+        }
     }
 };
 

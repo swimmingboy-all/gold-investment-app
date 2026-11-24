@@ -259,15 +259,8 @@ const App = {
 
         container.innerHTML = html;
 
-        // 각 카테고리 차트 초기화
-        setTimeout(() => {
-            GoldCharts.initRealRateChart('chart-realRate');
-            GoldCharts.initDollarChart('chart-dollar');
-            GoldCharts.initSupplyChart('chart-supplyDemand');
-            GoldCharts.initYieldCurveChart('chart-macroLabor');
-            GoldCharts.initRelativeChart('chart-relativeValuation');
-            if (window.lucide) lucide.createIcons();
-        }, 100);
+        // 아이콘 리프레시
+        if (window.lucide) lucide.createIcons();
     },
 
     createIndicatorCardHtml(ind) {
@@ -375,9 +368,9 @@ const App = {
         // 탭 버튼 스타일 갱신
         document.querySelectorAll('.tab-btn').forEach(btn => {
             if (btn.dataset.tab === tabId) {
-                btn.classList.add('active', 'border-amber-500', 'text-amber-400', 'bg-amber-500/15');
+                btn.className = 'tab-btn active px-4 py-2 rounded-xl text-xs font-bold border border-amber-500 text-amber-400 bg-amber-500/15 transition flex items-center gap-1.5 shrink-0 shadow-sm';
             } else {
-                btn.classList.remove('active', 'border-amber-500', 'text-amber-400', 'bg-amber-500/15');
+                btn.className = 'tab-btn px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white border border-transparent transition flex items-center gap-1.5 shrink-0';
             }
         });
 
@@ -390,22 +383,43 @@ const App = {
             summaryView.classList.remove('hidden');
             categoriesView.classList.add('hidden');
             calendarView.classList.add('hidden');
+
+            // 요약 화면 레이더 차트 갱신
+            const result = GoldScoringEngine.calculateScore(this.currentWeights, this.overrideValues);
+            GoldCharts.initRadarChart('radar-chart-canvas', result.categoryScores);
         } else if (tabId === 'calendar') {
             summaryView.classList.add('hidden');
             categoriesView.classList.add('hidden');
             calendarView.classList.remove('hidden');
         } else {
-            // 특정 카테고리 탭 선택 시
+            // 특정 카테고리 탭 선택 시: 해당 카테고리 섹션만 선명하게 단독 표시!
             summaryView.classList.add('hidden');
-            categoriesView.classList.remove('hidden');
             calendarView.classList.add('hidden');
+            categoriesView.classList.remove('hidden');
 
-            // 해당 카테고리 섹션으로 스크롤
-            const targetSection = document.getElementById(`cat-section-${tabId}`);
-            if (targetSection) {
-                targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            const allSections = document.querySelectorAll('.category-section');
+            allSections.forEach(sec => {
+                if (sec.id === `cat-section-${tabId}`) {
+                    sec.style.display = 'block';
+                } else {
+                    sec.style.display = 'none';
+                }
+            });
+
+            // 해당 카테고리 차트 및 아이콘 즉시 렌더링 (display: block 상태에서 그려지므로 100% 정상 출력)
+            setTimeout(() => {
+                GoldCharts.renderChartByCategory(tabId);
+                if (window.lucide) lucide.createIcons();
+            }, 60);
+
+            // 네비게이션 바로 부드럽게 스크롤
+            const nav = document.querySelector('nav');
+            if (nav) {
+                nav.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             }
         }
+
+        if (window.lucide) lucide.createIcons();
     },
 
     applyPreset(presetKey) {
