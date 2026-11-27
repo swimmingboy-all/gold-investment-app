@@ -30,14 +30,14 @@ const GOLD_DATA = {
                     id: "us10y_tips",
                     name: "미국 10년물 TIPS 금리 (실질금리)",
                     code: "DFII10 (FRED)",
-                    currentValue: 1.88,
+                    currentValue: 2.05,
                     unit: "%",
                     prevValue: 2.15,
-                    change: -0.27,
-                    trend: "down", // 금에 호재
-                    impact: "bullish", // bullish, neutral, bearish
-                    score: +2, // -2 ~ +2
-                    explanation: "10년물 TIPS는 시장이 평가하는 '순수 실질금리'입니다. 2.0%를 하회하며 하향 안정화되는 흐름은 금 가격에 매우 강력한 상승 모멘텀을 제공합니다.",
+                    change: -0.10,
+                    trend: "down", // 전월 대비 하향세이나 2.0% 부근
+                    impact: "neutral", // bullish, neutral, bearish
+                    score: 0, // 2.0~2.3% 구간은 중립 (0점)
+                    explanation: "10년물 TIPS 실질금리는 2.05% 수준으로 2.0% 기준선 부근에 위치하여 단기적으로 중립적 흐름을 보이고 있습니다. 2.0%를 확실하게 밑돌아야 금에 강한 랠리 탄력이 붙습니다.",
                     goldCorrelation: "역상관 (-0.85)",
                     benchmark: "2.0% 이상이면 부담, 1.5% 미만이면 강한 랠리"
                 },

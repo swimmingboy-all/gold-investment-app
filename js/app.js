@@ -25,11 +25,52 @@ const App = {
 
     init() {
         this.currentWeights = { ...GoldScoringEngine.presets.balanced.weights };
+        this.syncSimulatorSliders();
         this.bindEvents();
         this.renderAll();
         // Lucide icons 렌더링
         if (window.lucide) {
             lucide.createIcons();
+        }
+    },
+
+    /**
+     * What-If 시뮬레이터 슬라이더를 수집된 실제 기준 데이터(GOLD_DATA)와 일치시킴
+     */
+    syncSimulatorSliders() {
+        const meta = GOLD_DATA.meta;
+        const tipsSlider = document.getElementById('sim-tips');
+        const dxySlider = document.getElementById('sim-dxy');
+        const usdkrwSlider = document.getElementById('sim-usdkrw');
+        const cbSlider = document.getElementById('sim-cb');
+
+        // 1. 실시간 10Y TIPS 실질금리 동기화
+        const currentTips = (meta && meta.us10yTips !== undefined) ? meta.us10yTips : 2.05;
+        if (tipsSlider) {
+            tipsSlider.value = currentTips;
+            setSafeText('sim-tips-val', currentTips.toFixed(2) + '%');
+        }
+
+        // 2. DXY 달러 인덱스 동기화
+        const currentDxy = (meta && meta.dxy !== undefined) ? meta.dxy : 104.2;
+        if (dxySlider) {
+            dxySlider.value = currentDxy;
+            setSafeText('sim-dxy-val', currentDxy.toFixed(1));
+        }
+
+        // 3. 원/달러 환율 동기화
+        const currentUsdkrw = (meta && meta.usdkrw !== undefined) ? Math.round(meta.usdkrw) : 1388;
+        if (usdkrwSlider) {
+            usdkrwSlider.value = currentUsdkrw;
+            setSafeText('sim-usdkrw-val', currentUsdkrw.toLocaleString() + '원');
+        }
+
+        // 4. 중앙은행 순매입량 동기화
+        const cbInd = GOLD_DATA.categories?.supplyDemand?.indicators?.find(i => i.id === 'central_bank_net_buys');
+        const currentCb = cbInd ? cbInd.currentValue : 290;
+        if (cbSlider) {
+            cbSlider.value = currentCb;
+            setSafeText('sim-cb-val', currentCb + '톤');
         }
     },
 
@@ -104,10 +145,7 @@ const App = {
         if (resetSimBtn) {
             resetSimBtn.addEventListener('click', () => {
                 this.overrideValues = {};
-                if (tipsSlider) { tipsSlider.value = 1.88; setSafeText('sim-tips-val', '1.88%'); }
-                if (dxySlider) { dxySlider.value = 104.1; setSafeText('sim-dxy-val', '104.1'); }
-                if (usdkrwSlider) { usdkrwSlider.value = 1392; setSafeText('sim-usdkrw-val', '1,392원'); }
-                if (cbSlider) { cbSlider.value = 290; setSafeText('sim-cb-val', '290톤'); }
+                this.syncSimulatorSliders();
                 this.renderScoreAndSignal();
             });
         }
@@ -478,6 +516,7 @@ const App = {
 
         try {
             const res = await api.syncAllLiveData();
+            this.syncSimulatorSliders();
             this.renderAll();
 
             // 갱신된 수치 엘리먼트에 플래시 애니메이션 효과 부여

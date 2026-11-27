@@ -59,10 +59,27 @@ const GoldScoringEngine = {
             let catCount = 0;
 
             catData.indicators.forEach(ind => {
+                let currentVal = ind.currentValue;
+
+                // meta 정보에 실시간 수집된 최신값이 있으면 우선 동기화
+                if (ind.id === 'us10y_tips' && GOLD_DATA.meta && GOLD_DATA.meta.us10yTips !== undefined) {
+                    currentVal = GOLD_DATA.meta.us10yTips;
+                } else if (ind.id === 'us10y_nominal' && GOLD_DATA.meta && GOLD_DATA.meta.us10y !== undefined) {
+                    currentVal = GOLD_DATA.meta.us10y;
+                } else if (ind.id === 'dxy' && GOLD_DATA.meta && GOLD_DATA.meta.dxy !== undefined) {
+                    currentVal = GOLD_DATA.meta.dxy;
+                } else if (ind.id === 'usdkrw' && GOLD_DATA.meta && GOLD_DATA.meta.usdkrw !== undefined) {
+                    currentVal = GOLD_DATA.meta.usdkrw;
+                }
+
                 let score = ind.score;
-                // What-If 오버라이드가 있을 경우 적용
+
+                // What-If 오버라이드가 있을 경우 오버라이드값 적용, 없을 경우 수집된 최신 수치 기반 동적 평가
                 if (indicatorOverrides[ind.id] !== undefined) {
-                    score = this.evaluateOverride(ind.id, indicatorOverrides[ind.id]);
+                    currentVal = indicatorOverrides[ind.id];
+                    score = this.evaluateOverride(ind.id, currentVal);
+                } else if (['us10y_tips', 'dxy', 'usdkrw', 'central_bank_net_buys'].includes(ind.id)) {
+                    score = this.evaluateOverride(ind.id, currentVal);
                 }
 
                 catSum += score;
@@ -75,7 +92,7 @@ const GoldScoringEngine = {
                     name: ind.name,
                     score: score,
                     impact: score > 0 ? "bullish" : (score < 0 ? "bearish" : "neutral"),
-                    currentValue: indicatorOverrides[ind.id] !== undefined ? indicatorOverrides[ind.id] : ind.currentValue,
+                    currentValue: currentVal,
                     unit: ind.unit,
                     explanation: ind.explanation
                 });

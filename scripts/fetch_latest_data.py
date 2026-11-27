@@ -116,6 +116,9 @@ def update_indicators_file(usdkrw, gold_usd, tips, us10y, bei, t10y2y, vix, cpi)
     # 2. 카테고리 내부 indicators 업데이트
     if tips:
         content = re.sub(r'(id:\s*"us10y_tips"[\s\S]*?currentValue:\s*)[\d\.]+', rf'\g<1>{tips}', content)
+        # TIPS 실질금리 벤치마크 점수 자동 갱신 (<1.5: +2, <2.0: +1, <2.3: 0, <2.6: -1, >=2.6: -2)
+        tips_score = "+2" if tips < 1.5 else ("+1" if tips < 2.0 else ("0" if tips < 2.3 else ("-1" if tips < 2.6 else "-2")))
+        content = re.sub(r'(id:\s*"us10y_tips"[\s\S]*?score:\s*)[\+\-]?\d+', rf'\g<1>{tips_score}', content)
     if us10y:
         content = re.sub(r'(id:\s*"us10y_nominal"[\s\S]*?currentValue:\s*)[\d\.]+', rf'\g<1>{us10y}', content)
     if bei:
