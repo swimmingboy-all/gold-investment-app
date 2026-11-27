@@ -443,38 +443,87 @@ const App = {
             }
         });
 
-        document.getElementById('active-preset-desc').textContent = `${preset.name}: ${preset.description}`;
+        setSafeText('active-preset-desc', `${preset.name}: ${preset.description}`);
         this.renderScoreAndSignal();
     },
 
     async triggerLiveSync(showFeedback = true) {
         if (!window.GoldApiService) return;
 
+        const syncBtn = document.getElementById('sync-live-data-btn');
         const syncIcon = document.getElementById('sync-icon');
-        if (syncIcon) {
-            syncIcon.classList.add('animate-spin');
+        
+        if (syncIcon) syncIcon.classList.add('animate-spin');
+        if (syncBtn) {
+            syncBtn.classList.add('opacity-80');
+            syncBtn.setAttribute('disabled', 'true');
         }
 
         try {
             const res = await GoldApiService.syncAllLiveData();
             this.renderAll();
 
+            // 갱신된 수치 엘리먼트에 플래시 애니메이션 효과 부여
+            ['ticker-gold-usd', 'ticker-gold-krw-g', 'ticker-gold-krw-don', 'ticker-usdkrw', 'header-last-updated'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.classList.remove('flash-highlight');
+                    void el.offsetWidth; // 트리거 리플로우
+                    el.classList.add('flash-highlight');
+                }
+            });
+
             if (showFeedback) {
                 if (res.updatedItems.length > 0) {
-                    alert(`✅ 실시간 데이터 동기화 완료!\n\n반영된 항목:\n• ${res.updatedItems.join('\n• ')}`);
+                    this.showToast('실시간 시세 갱신 완료', res.updatedItems.join('<br>'), true);
                 } else {
-                    alert('네트워크 상태를 확인해주세요. 기본 데이터셋이 유지됩니다.');
+                    this.showToast('동기화 실패', '네트워크 연결을 확인해주세요. 기본 데이터셋이 유지됩니다.', false);
                 }
             }
         } catch (e) {
             console.error('동기화 오류:', e);
             if (showFeedback) {
-                alert('실시간 데이터를 불러오는 중 오류가 발생했습니다.');
+                this.showToast('동기화 오류', '실시간 데이터를 불러오는 중 오류가 발생했습니다.', false);
             }
         } finally {
-            if (syncIcon) {
-                syncIcon.classList.remove('animate-spin');
+            if (syncIcon) syncIcon.classList.remove('animate-spin');
+            if (syncBtn) {
+                syncBtn.classList.remove('opacity-80');
+                syncBtn.removeAttribute('disabled');
             }
         }
+    },
+
+    showToast(title, message, isSuccess = true) {
+        let container = document.getElementById('toast-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'toast-container';
+            document.body.appendChild(container);
+        }
+
+        const toast = document.createElement('div');
+        toast.className = 'toast-message';
+        const iconColor = isSuccess ? 'text-emerald-400' : 'text-rose-400';
+        const iconSvg = isSuccess 
+            ? '<svg class="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>'
+            : '<svg class="w-5 h-5 text-rose-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>';
+
+        toast.innerHTML = `
+            ${iconSvg}
+            <div>
+                <strong class="block font-bold text-white mb-0.5">${title}</strong>
+                <div class="text-xs text-slate-300 leading-relaxed">${message}</div>
+            </div>
+        `;
+
+        container.appendChild(toast);
+
+        setTimeout(() => {
+            toast.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateY(10px)';
+            setTimeout(() => toast.remove(), 400);
+        }, 4000);
     }
 };
