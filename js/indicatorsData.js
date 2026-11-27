@@ -6,14 +6,14 @@
 const GOLD_DATA = {
     // 현재 금 시세 정보 (2024~2026 트렌드 반영)
     meta: {
-        goldUSD: 3662.5, // 온스당 USD
-        goldKRW_g: 158235, // g당 원화 가격
-        goldKRW_don: 593381, // 돈(3.75g)당 원화 가격
+        goldUSD: 3655.0, // 온스당 USD
+        goldKRW_g: 157911, // g당 원화 가격
+        goldKRW_don: 592166, // 돈(3.75g)당 원화 가격
         usdkrw: 1343.8,
-        dxy: 103.726,
+        dxy: 103.754,
         us10y: 4.85,
         us10yTips: 2.73,
-        updatedAt: "2026-11-27 16:36:48 KST (공식 원천 데이터 실시간 동기화)"
+        updatedAt: "2026-11-27 16:43:50 KST (공식 원천 데이터 실시간 동기화)"
     },
 
     // 8대 카테고리 정의 및 지표 항목
@@ -118,7 +118,7 @@ const GOLD_DATA = {
                     id: "dxy",
                     name: "무역가중 달러지수 (DXY 대용, DTWEXBGS)",
                     code: "DTWEXBGS (FRED)",
-                    currentValue: 103.726,
+                    currentValue: 103.754,
                     unit: "pt",
                     prevValue: 105.8,
                     change: -1.7,
@@ -190,7 +190,7 @@ const GOLD_DATA = {
                     id: "etf_holdings",
                     name: "주요 금 ETF 보유량 (GLD+IAU+GLDM)",
                     code: "Yahoo Finance (GLD/IAU/GLDM 발행주수)",
-                    currentValue: 1606,
+                    currentValue: 1609,
                     unit: "톤",
                     prevValue: 3120,
                     change: +140,
@@ -400,9 +400,8 @@ const GOLD_DATA = {
                     explanation: "미국 노동시장의 과열이 진정되고 고용 증가세가 둔화됨에 따라 연준의 연속 금리 인하 명분이 강화되고 있습니다.",
                     goldCorrelation: "경기 둔화 시 금에 우호적",
                     benchmark: "실업률 4.0% 상회 지속 시 침체 방어용 금리 인하 촉진",
-                    autoFetch: false,
-                    manualUpdate: true,
-                    fetchNote: "BLS 월간 공식 발표(매월 첫째주 금요일) 후 업데이트",
+                    autoFetch: true,
+                    fetchNote: "BLS 공식 발표 시 FRED API로 월간 자동 갱신",
                     asOfDate: "2026-11",
                     sourceUrl: "https://fred.stlouisfed.org/series/UNRATE"
                 },
@@ -556,7 +555,7 @@ const GOLD_DATA = {
                     id: "gold_silver_ratio",
                     name: "금/은 비율 (Gold-Silver Ratio)",
                     code: "XAU/XAG Ratio (실시간 자동 계산)",
-                    currentValue: 83.3,
+                    currentValue: 83.4,
                     unit: "배",
                     prevValue: 86.2,
                     change: -1.7,
@@ -574,7 +573,7 @@ const GOLD_DATA = {
                     id: "gold_copper_ratio",
                     name: "금/구리 비율 (Gold-Copper Ratio)",
                     code: "Gold / Doctor Copper (HG=F 선물)",
-                    currentValue: 644.7,
+                    currentValue: 642.4,
                     unit: "배",
                     prevValue: 610,
                     change: +15,
@@ -592,7 +591,7 @@ const GOLD_DATA = {
                     id: "gold_sp500_ratio",
                     name: "금 대비 S&P 500 비율 (Gold / S&P 500)",
                     code: "Gold / SPX (^GSPC 자동 계산)",
-                    currentValue: 0.5099,
+                    currentValue: 0.5089,
                     unit: "배",
                     prevValue: 0.43,
                     change: +0.02,

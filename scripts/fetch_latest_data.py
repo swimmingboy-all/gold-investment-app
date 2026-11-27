@@ -23,6 +23,13 @@ fetch_latest_data.py
   4. Open Exchange Rates:
      - 실시간 USD/KRW 원/달러 환율
      - 실시간 USD/CNY 위안/달러 환율
+  5. 세인트루이스 연준 (FRED JSON API - FRED_API_KEY 등록 시 자동 활성화):
+     - 비농업 고용(PAYEMS) & 실업률(UNRATE)
+     - 소비자물가지수 (CPI YoY)
+     - 근원 PCE 물가지수 (Core PCE YoY)
+     - 생산자물가지수 (PPI YoY)
+     - 연방기금 실효금리 (FEDFUNDS)
+     - M2 통화량 (M2SL)
 """
 
 import urllib.request
@@ -32,6 +39,8 @@ import os
 import datetime
 import http.cookiejar
 import xml.etree.ElementTree as ET
+
+FRED_API_KEY = os.environ.get('FRED_API_KEY', '').strip()
 
 # ════════════════════════════════════════════════
 # 1. 공통 HTTP Fetch
@@ -139,7 +148,6 @@ def fetch_treasury_rates():
 
 def fetch_cftc_cot():
     url = "https://www.cftc.gov/dea/futures/deacmxlf.htm"
-    # CFTC는 정확히 Mozilla/5.0 단일 헤더 필요
     raw = fetch_raw(url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=12)
     if not raw:
         return None, None
@@ -185,10 +193,6 @@ def fetch_yahoo_quote(symbol):
     return None
 
 def fetch_etf_holdings(gold_usd):
-    """
-    Yahoo Finance Crumb를 획득하여 GLD와 IAU의 공식 Net Assets(순자산)을 조회하고
-    현재 금 시세를 기반으로 실물 금 보유량(톤)을 실시간 환산합니다.
-    """
     if not gold_usd or gold_usd <= 0:
         return None
 
@@ -218,8 +222,6 @@ def fetch_etf_holdings(gold_usd):
                     print(f"  [OK] {r.get('symbol')}: 순자산 ${na:,.0f}")
 
             if total_net_assets > 0:
-                # 총 온스 = 총 순자산 / 금 온스당 가격
-                # 톤 = 온스 / 32150.746
                 total_oz = total_net_assets / gold_usd
                 tons = int(round(total_oz / 32150.746))
                 print(f"  [OK] 주요 금 ETF(GLD+IAU) 실시간 보유량: {tons:,}톤 (순자산 합계 ${total_net_assets:,.0f})")
@@ -230,7 +232,93 @@ def fetch_etf_holdings(gold_usd):
     return None
 
 # ════════════════════════════════════════════════
-# 5. 실시간 금 / 은 / 환율 수집
+# 5. FRED API 수집기 (고용, CPI, PCE, PPI, Fed Rate)
+# ════════════════════════════════════════════════
+
+def fetch_fred_series(series_id, limit=1):
+    """FRED 공식 API로 시계열 관측치 수집"""
+    if not FRED_API_KEY:
+        return []
+    url = f"https://api.stlouisfed.org/fred/series/observations?series_id={series_id}&api_key={FRED_API_KEY}&file_type=json&sort_order=desc&limit={limit}"
+    data = fetch_json(url, timeout=10)
+    if data and 'observations' in data:
+        results = []
+        for o in data['observations']:
+            try:
+                results.append({'date': o['date'], 'value': float(o['value'])})
+            except (ValueError, TypeError):
+                pass
+        return results
+    return []
+
+def fetch_fred_yoy(series_id):
+    """FRED 월간 지표로부터 YoY% 자동 계산"""
+    obs = fetch_fred_series(series_id, limit=14)
+    if len(obs) >= 13:
+        latest = obs[0]['value']
+        prev_yr = obs[12]['value']
+        if prev_yr and prev_yr != 0:
+            yoy = round(((latest / prev_yr) - 1) * 100, 1)
+            date_str = obs[0]['date']
+            print(f"  [OK] FRED {series_id} ({date_str}): YoY {yoy}% (최신 {latest} / 전년 {prev_yr})")
+            return yoy, date_str
+    return None, None
+
+def fetch_fred_labor_and_macro():
+    """실업률, 비농업고용, CPI, PCE, PPI, FedRate, M2 일괄 수집"""
+    macro = {
+        'unemployment_text': None,
+        'unemployment_date': None,
+        'cpi_yoy': None,
+        'cpi_date': None,
+        'core_pce_yoy': None,
+        'core_pce_date': None,
+        'ppi_yoy': None,
+        'ppi_date': None,
+        'fed_rate': None,
+        'fed_rate_date': None,
+        'm2': None
+    }
+
+    if not FRED_API_KEY:
+        print("  [INFO] FRED_API_KEY가 등록되지 않아 고용/물가 지표는 기존 공시값을 유지합니다. (GitHub Actions에서는 자동 갱신됨)")
+        return macro
+
+    print("  [INFO] FRED_API_KEY 감지 → 공식 FRED API로 실시간 고용/물가 수집...")
+
+    # 1. 실업률 (UNRATE) & 비농업 고용 (PAYEMS)
+    unrate_obs = fetch_fred_series("UNRATE", limit=1)
+    payems_obs = fetch_fred_series("PAYEMS", limit=2)
+    if unrate_obs and payems_obs and len(payems_obs) >= 2:
+        unrate = unrate_obs[0]['value']
+        # PAYEMS 단위: 천 명. 월간 증감 = (이번달 - 지난달)
+        mom_change = payems_obs[0]['value'] - payems_obs[1]['value']
+        mom_k = int(round(mom_change / 10.0)) # 만 명 단위 환산
+        macro['unemployment_text'] = f"실업률 {unrate}% / NFP {mom_k:+d}만"
+        macro['unemployment_date'] = unrate_obs[0]['date']
+        print(f"  [OK] 미국 고용보고서 ({macro['unemployment_date']}): {macro['unemployment_text']}")
+
+    # 2. 물가지수 (CPI, Core PCE, PPI) YoY
+    macro['cpi_yoy'], macro['cpi_date'] = fetch_fred_yoy("CPIAUCSL")
+    macro['core_pce_yoy'], macro['core_pce_date'] = fetch_fred_yoy("PCEPILFE")
+    macro['ppi_yoy'], macro['ppi_date'] = fetch_fred_yoy("PPIACO")
+
+    # 3. 연방기금금리 (FEDFUNDS)
+    ff_obs = fetch_fred_series("FEDFUNDS", limit=1)
+    if ff_obs:
+        macro['fed_rate'] = ff_obs[0]['value']
+        macro['fed_rate_date'] = ff_obs[0]['date']
+        print(f"  [OK] 연방기금 실효금리 ({macro['fed_rate_date']}): {macro['fed_rate']}%")
+
+    # 4. M2 통화량 (M2SL)
+    m2_obs = fetch_fred_series("M2SL", limit=1)
+    if m2_obs:
+        macro['m2'] = m2_obs[0]['value']
+
+    return macro
+
+# ════════════════════════════════════════════════
+# 6. 실시간 금 / 은 / 환율 수집
 # ════════════════════════════════════════════════
 
 def fetch_gold_price():
@@ -266,7 +354,7 @@ def fetch_fx():
     return None, None
 
 # ════════════════════════════════════════════════
-# 6. indicatorsData.js 파일 실시간 업데이트
+# 7. indicatorsData.js 파일 실시간 업데이트
 # ════════════════════════════════════════════════
 
 def set_field(content, indicator_id, field_name, new_value, is_string=False):
@@ -286,7 +374,7 @@ def set_field(content, indicator_id, field_name, new_value, is_string=False):
 def update_asofdate(content, indicator_id, date_str):
     return set_field(content, indicator_id, 'asOfDate', date_str, is_string=True)
 
-def apply_all_updates(rates, gold, silver, krw, dxy, vix, copper, sp500, cot_net, cot_date, etf_tons):
+def apply_all_updates(rates, gold, silver, krw, dxy, vix, copper, sp500, cot_net, cot_date, etf_tons, macro):
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     file_path = os.path.join(base_dir, 'js', 'indicatorsData.js')
 
@@ -300,7 +388,8 @@ def apply_all_updates(rates, gold, silver, krw, dxy, vix, copper, sp500, cot_net
     tz_kst = datetime.timezone(datetime.timedelta(hours=9))
     now_kst = datetime.datetime.now(tz_kst)
     today = now_kst.strftime("%Y-%m-%d")
-    now_str = now_kst.strftime("%Y-%m-%d %H:%M:%S") + " KST (공식 원천 데이터 실시간 동기화)"
+    source_tag = "FRED API + 미 재무부 공식 동기화" if FRED_API_KEY else "공식 원천 데이터 실시간 동기화"
+    now_str = now_kst.strftime("%Y-%m-%d %H:%M:%S") + f" KST ({source_tag})"
 
     # 1. meta 블록
     if gold:
@@ -320,7 +409,7 @@ def apply_all_updates(rates, gold, silver, krw, dxy, vix, copper, sp500, cot_net
         content = re.sub(r'dxy:\s*[\d\.]+', f'dxy: {dxy}', content)
     content = re.sub(r'updatedAt:\s*"[^"]*"', f'updatedAt: "{now_str}"', content)
 
-    # 2. 1. 실질금리
+    # 2. 1. 실질금리 & 연준 기준금리
     if rates['tips10y'] is not None:
         tips = rates['tips10y']
         content = set_field(content, 'us10y_tips', 'currentValue', tips)
@@ -336,6 +425,10 @@ def apply_all_updates(rates, gold, silver, krw, dxy, vix, copper, sp500, cot_net
         content = set_field(content, 'bei_10y', 'currentValue', rates['bei10y'])
         content = update_asofdate(content, 'bei_10y', rates['date'] or today)
 
+    if macro['fed_rate'] is not None:
+        content = set_field(content, 'fed_funds_rate', 'currentValue', macro['fed_rate'])
+        content = update_asofdate(content, 'fed_funds_rate', macro['fed_rate_date'] or today)
+
     # 3. 2. 달러&환율
     if dxy:
         content = set_field(content, 'dxy', 'currentValue', dxy)
@@ -347,7 +440,24 @@ def apply_all_updates(rates, gold, silver, krw, dxy, vix, copper, sp500, cot_net
         content = set_field(content, 'usdkrw', 'currentValue', krw)
         content = update_asofdate(content, 'usdkrw', today)
 
-    # 4. 4. 경기&고용&금리차
+    # 4. 3. 인플레이션 지표 (FRED 자동 갱신)
+    if macro['cpi_yoy'] is not None:
+        content = set_field(content, 'cpi', 'currentValue', macro['cpi_yoy'])
+        content = update_asofdate(content, 'cpi', macro['cpi_date'] or today)
+
+    if macro['core_pce_yoy'] is not None:
+        content = set_field(content, 'core_pce', 'currentValue', macro['core_pce_yoy'])
+        content = update_asofdate(content, 'core_pce', macro['core_pce_date'] or today)
+
+    if macro['ppi_yoy'] is not None:
+        content = set_field(content, 'ppi', 'currentValue', macro['ppi_yoy'])
+        content = update_asofdate(content, 'ppi', macro['ppi_date'] or today)
+
+    # 5. 4. 경기&고용&금리차
+    if macro['unemployment_text']:
+        content = set_field(content, 'nfp_unemployment', 'currentValue', macro['unemployment_text'], is_string=True)
+        content = update_asofdate(content, 'nfp_unemployment', macro['unemployment_date'] or today)
+
     if rates['spread10y2y'] is not None:
         content = set_field(content, 'yield_curve_10y2y', 'currentValue', rates['spread10y2y'])
         content = update_asofdate(content, 'yield_curve_10y2y', rates['date'] or today)
@@ -356,14 +466,14 @@ def apply_all_updates(rates, gold, silver, krw, dxy, vix, copper, sp500, cot_net
         content = set_field(content, 'yield_curve_10y3m', 'currentValue', rates['spread10y3m'])
         content = update_asofdate(content, 'yield_curve_10y3m', rates['date'] or today)
 
-    # 5. 5. 위험&심리
+    # 6. 5. 위험&심리
     if vix:
         content = set_field(content, 'vix', 'currentValue', vix)
         vix_score = "+2" if vix >= 25 else ("+1" if vix >= 20 else ("0" if vix >= 15 else "-1"))
         content = set_field(content, 'vix', 'score', vix_score)
         content = update_asofdate(content, 'vix', today)
 
-    # 6. 6. 수급 지표 (CFTC COT, ETF)
+    # 7. 6. 수급 지표 (CFTC COT, ETF)
     if cot_net is not None:
         content = set_field(content, 'comex_cot', 'currentValue', cot_net)
         cot_score = "+2" if cot_net < 150000 else ("+1" if cot_net < 220000 else ("0" if cot_net < 280000 else "-1"))
@@ -374,7 +484,7 @@ def apply_all_updates(rates, gold, silver, krw, dxy, vix, copper, sp500, cot_net
         content = set_field(content, 'etf_holdings', 'currentValue', etf_tons)
         content = update_asofdate(content, 'etf_holdings', today)
 
-    # 7. 7. 상대 가치 지표
+    # 8. 7. 상대 가치 지표
     if gold and silver and silver > 0:
         gs = round(gold / silver, 1)
         content = set_field(content, 'gold_silver_ratio', 'currentValue', gs)
@@ -390,6 +500,11 @@ def apply_all_updates(rates, gold, silver, krw, dxy, vix, copper, sp500, cot_net
         content = set_field(content, 'gold_sp500_ratio', 'currentValue', gsp)
         content = update_asofdate(content, 'gold_sp500_ratio', today)
 
+    if gold and macro['m2'] and macro['m2'] > 0:
+        gm2 = round(gold / (macro['m2'] / 1000.0), 4)
+        content = set_field(content, 'gold_m2_ratio', 'currentValue', str(gm2), is_string=True)
+        content = update_asofdate(content, 'gold_m2_ratio', today)
+
     with open(file_path, 'w', encoding='utf-8') as f:
         f.write(content)
     print(f"\n[SUCCESS] {file_path} 실시간 수집 데이터로 100% 갱신 완료!")
@@ -403,18 +518,18 @@ if __name__ == '__main__':
     print("금 투자 8대 지표 실시간 자동 수집기 (공식 원천 데이터)")
     print("=" * 65)
 
-    print("\n[1/5] 미국 재무부(U.S. Treasury) 국채 & TIPS 실질금리 피드 수집...")
+    print("\n[1/6] 미국 재무부(U.S. Treasury) 국채 & TIPS 실질금리 피드 수집...")
     rates = fetch_treasury_rates()
 
-    print("\n[2/5] CFTC 공식 COMEX 금 선물 COT 포지션 파싱...")
+    print("\n[2/6] CFTC 공식 COMEX 금 선물 COT 포지션 파싱...")
     cot_net, cot_date = fetch_cftc_cot()
 
-    print("\n[3/5] 실시간 금·은 시세 및 환율 수집...")
+    print("\n[3/6] 실시간 금·은 시세 및 환율 수집...")
     gold = fetch_gold_price()
     silver = fetch_silver_price()
     krw, cny = fetch_fx()
 
-    print("\n[4/5] Yahoo Finance 시장 데이터 수집 (DXY, VIX, 구리, S&P500, ETF)...")
+    print("\n[4/6] Yahoo Finance 시장 데이터 수집 (DXY, VIX, 구리, S&P500, ETF)...")
     dxy = fetch_yahoo_quote('DX-Y.NYB')
     if dxy: print(f"  [OK] 실시간 DXY 달러 인덱스: {dxy}")
     vix = fetch_yahoo_quote('^VIX')
@@ -425,8 +540,11 @@ if __name__ == '__main__':
     if sp500: print(f"  [OK] S&P 500 지수: {sp500}")
     etf_tons = fetch_etf_holdings(gold)
 
-    print("\n[5/5] js/indicatorsData.js 파일 갱신...")
-    apply_all_updates(rates, gold, silver, krw, dxy, vix, copper, sp500, cot_net, cot_date, etf_tons)
+    print("\n[5/6] FRED 거시경제 지표 수집 (고용, CPI, PCE, PPI, 연준금리, M2)...")
+    macro = fetch_fred_labor_and_macro()
+
+    print("\n[6/6] js/indicatorsData.js 파일 갱신...")
+    apply_all_updates(rates, gold, silver, krw, dxy, vix, copper, sp500, cot_net, cot_date, etf_tons, macro)
 
     print("\n" + "=" * 65)
     print("수집 완료 현황 요약")
@@ -444,11 +562,14 @@ if __name__ == '__main__':
         ("국제 은 시세", f"${silver}" if silver else None, "/oz"),
         ("원/달러 환율", f"{krw}원" if krw else None, ""),
         ("주요 금 ETF 보유량", f"{etf_tons:,}" if etf_tons else None, "톤 (GLD+IAU 실물 순자산 환산)"),
+        ("비농업 고용 & 실업률", macro['unemployment_text'], f"({macro['unemployment_date']})" if macro['unemployment_text'] else "(FRED Key 시 자동)"),
+        ("CPI 인플레이션 YoY", f"{macro['cpi_yoy']}%" if macro['cpi_yoy'] else None, f"({macro['cpi_date']})" if macro['cpi_yoy'] else "(FRED Key 시 자동)"),
+        ("Core PCE 물가 YoY", f"{macro['core_pce_yoy']}%" if macro['core_pce_yoy'] else None, f"({macro['core_pce_date']})" if macro['core_pce_yoy'] else "(FRED Key 시 자동)"),
         ("금/은 비율", round(gold/silver, 1) if (gold and silver) else None, "배"),
         ("금/구리 비율", round(gold/copper, 1) if (gold and copper) else None, "배"),
         ("금/S&P500 비율", round(gold/sp500, 4) if (gold and sp500) else None, "배"),
     ]
     for name, val, unit in items:
-        status = "✅ 수집 성공" if val is not None else "❌ 실패"
-        print(f"  {status:10s} | {name:16s}: {str(val):12s} {unit}")
+        status = "✅ 수집 성공" if val is not None else "⏳ 대기 (GitHub)"
+        print(f"  {status:10s} | {name:16s}: {str(val):14s} {unit}")
     print("=" * 65)
