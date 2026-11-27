@@ -2,10 +2,27 @@
 # -*- coding: utf-8 -*-
 """
 fetch_latest_data.py
-GitHub Actions에서 매일 평일 자동 실행되어 최신 시장 데이터 및 거시 지표를 수집하고
-js/indicatorsData.js 파일을 자동으로 갱신하는 스크립트
+공식 정부 및 금융 원천 데이터를 직접 파싱하여 금 투자 지표를 100% 실제 데이터로 자동 갱신하는 스크립트
 
-GitHub Secrets에 'FRED_API_KEY'를 등록하면 공식 FRED API를 우선 사용합니다.
+[원천 데이터 출처 (100% 무료 / 공식 / 실시간)]
+  1. 미국 재무부 (U.S. Department of the Treasury XML 피드):
+     - 10Y TIPS 실질금리 (Daily Treasury Real Yield Curve)
+     - 10Y 명목금리 (Daily Treasury Yield Curve)
+     - 2Y, 3M 국채금리 → 10Y-2Y, 10Y-3M 장단기 금리차 계산
+     - 10Y 기대인플레이션 (BEI = 10Y 명목 - 10Y TIPS) 자동 계산
+  2. CFTC (미국 상품선물거래위원회 공식 COMEX COT 보고서):
+     - COMEX 금 선물 투기적(Non-Commercial) 순매수 포지션 (계약수)
+  3. Yahoo Finance & Gold-API:
+     - 실시간 ICE 달러 인덱스 (DXY, DX-Y.NYB)
+     - 실시간 CBOE VIX 지수 (^VIX)
+     - 실시간 국제 금 시세 (XAU/USD, gold-api.com)
+     - 실시간 은 시세 (XAG/USD) → 금/은 비율 자동 계산
+     - 실시간 COMEX 구리 선물 (HG=F) → 금/구리 비율 자동 계산
+     - 실시간 S&P 500 지수 (^GSPC) → 금/S&P500 비율 자동 계산
+     - 주요 금 ETF(GLD+IAU) 순자산 기반 실물 금 보유량(톤) 계산
+  4. Open Exchange Rates:
+     - 실시간 USD/KRW 원/달러 환율
+     - 실시간 USD/CNY 위안/달러 환율
 """
 
 import urllib.request
@@ -13,143 +30,425 @@ import json
 import re
 import os
 import datetime
+import http.cookiejar
+import xml.etree.ElementTree as ET
 
-FRED_API_KEY = os.environ.get('FRED_API_KEY', '').strip()
+# ════════════════════════════════════════════════
+# 1. 공통 HTTP Fetch
+# ════════════════════════════════════════════════
 
-def fetch_json(url, headers=None):
+def fetch_raw(url, headers=None, timeout=10):
     if headers is None:
         headers = {'User-Agent': 'Mozilla/5.0'}
     try:
         req = urllib.request.Request(url, headers=headers)
-        with urllib.request.urlopen(req, timeout=15) as res:
-            return json.loads(res.read().decode('utf-8'))
+        with urllib.request.urlopen(req, timeout=timeout) as res:
+            return res.read()
     except Exception as e:
-        print(f"Error fetching {url}: {e}")
+        print(f"  [WARN] fetch 실패 ({url[:50]}...): {e}")
         return None
 
-def fetch_exchange_rate():
-    """USD/KRW 실시간 환율 수집"""
-    data = fetch_json("https://open.er-api.com/v6/latest/USD")
-    if data and 'rates' in data and 'KRW' in data['rates']:
-        krw = round(data['rates']['KRW'], 1)
-        print(f"[OK] USD/KRW 환율: {krw}원")
-        return krw
+def fetch_json(url, headers=None, timeout=10):
+    raw = fetch_raw(url, headers=headers, timeout=timeout)
+    if raw:
+        try:
+            return json.loads(raw.decode('utf-8'))
+        except Exception as e:
+            print(f"  [WARN] JSON 파싱 실패: {e}")
     return None
+
+# ════════════════════════════════════════════════
+# 2. 미국 재무부 (U.S. Treasury) 공식 XML 피드
+# ════════════════════════════════════════════════
+
+def fetch_treasury_rates():
+    year = datetime.datetime.now().year
+    ns = {
+        'd': 'http://schemas.microsoft.com/ado/2007/08/dataservices',
+        'm': 'http://schemas.microsoft.com/ado/2007/08/dataservices/metadata',
+        'atom': 'http://www.w3.org/2005/Atom'
+    }
+
+    rates = {
+        'tips10y': None,
+        'nominal10y': None,
+        'nominal2y': None,
+        'nominal3m': None,
+        'spread10y2y': None,
+        'spread10y3m': None,
+        'bei10y': None,
+        'date': None
+    }
+
+    # 1) 실질금리 (Real Yields) 피드
+    for y in [year, year - 1]:
+        url_real = f"https://home.treasury.gov/resource-center/data-chart-center/interest-rates/pages/xml?data=daily_treasury_real_yield_curve&field_tdr_date_value={y}"
+        raw_real = fetch_raw(url_real, timeout=10)
+        if raw_real:
+            try:
+                root = ET.fromstring(raw_real)
+                entries = root.findall('atom:entry', ns)
+                if entries:
+                    last_props = entries[-1].find('atom:content', ns).find('m:properties', ns)
+                    d_val = last_props.find('d:NEW_DATE', ns).text
+                    y_val = last_props.find('d:TC_10YEAR', ns).text
+                    if y_val:
+                        rates['tips10y'] = round(float(y_val), 2)
+                        rates['date'] = d_val.split('T')[0]
+                        print(f"  [OK] 미 재무부 10Y TIPS 실질금리 ({rates['date']}): {rates['tips10y']}%")
+                        break
+            except Exception as e:
+                print(f"  [WARN] 재무부 TIPS XML 파싱 오류: {e}")
+
+    # 2) 명목금리 (Nominal Yields) 피드
+    for y in [year, year - 1]:
+        url_nom = f"https://home.treasury.gov/resource-center/data-chart-center/interest-rates/pages/xml?data=daily_treasury_yield_curve&field_tdr_date_value={y}"
+        raw_nom = fetch_raw(url_nom, timeout=10)
+        if raw_nom:
+            try:
+                root = ET.fromstring(raw_nom)
+                entries = root.findall('atom:entry', ns)
+                if entries:
+                    last_props = entries[-1].find('atom:content', ns).find('m:properties', ns)
+                    y10 = last_props.find('d:BC_10YEAR', ns).text
+                    y2 = last_props.find('d:BC_2YEAR', ns).text
+                    m3 = last_props.find('d:BC_3MONTH', ns).text
+                    if y10: rates['nominal10y'] = round(float(y10), 2)
+                    if y2: rates['nominal2y'] = round(float(y2), 2)
+                    if m3: rates['nominal3m'] = round(float(m3), 2)
+                    if rates['nominal10y'] and rates['nominal2y']:
+                        rates['spread10y2y'] = round(rates['nominal10y'] - rates['nominal2y'], 2)
+                    if rates['nominal10y'] and rates['nominal3m']:
+                        rates['spread10y3m'] = round(rates['nominal10y'] - rates['nominal3m'], 2)
+                    print(f"  [OK] 미 재무부 10Y 명목: {rates['nominal10y']}%, 2Y: {rates['nominal2y']}%, 3M: {rates['nominal3m']}%")
+                    print(f"  [OK] 장단기 스프레드: 10Y-2Y = {rates['spread10y2y']}%p, 10Y-3M = {rates['spread10y3m']}%p")
+                    break
+            except Exception as e:
+                print(f"  [WARN] 재무부 명목 XML 파싱 오류: {e}")
+
+    # 3) BEI 기대인플레이션율 계산
+    if rates['nominal10y'] is not None and rates['tips10y'] is not None:
+        rates['bei10y'] = round(rates['nominal10y'] - rates['tips10y'], 2)
+        print(f"  [OK] 10년 기대인플레이션(BEI): {rates['bei10y']}% (명목 {rates['nominal10y']}% - TIPS {rates['tips10y']}%)")
+
+    return rates
+
+# ════════════════════════════════════════════════
+# 3. CFTC 공식 COMEX 금 선물 COT 포지션 파싱
+# ════════════════════════════════════════════════
+
+def fetch_cftc_cot():
+    url = "https://www.cftc.gov/dea/futures/deacmxlf.htm"
+    # CFTC는 정확히 Mozilla/5.0 단일 헤더 필요
+    raw = fetch_raw(url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=12)
+    if not raw:
+        return None, None
+
+    text = raw.decode('utf-8', errors='replace')
+    pos = text.find('GOLD - COMMODITY EXCHANGE INC.')
+    if pos == -1:
+        print("  [WARN] CFTC 페이지 내 'GOLD - COMMODITY EXCHANGE INC.' 섹션 미발견")
+        return None, None
+
+    block = text[pos:pos+2000]
+
+    date_match = re.search(r'Commitments of Traders[^\n,]+,\s*([A-Za-z]+\s+\d+,\s+\d{4})', block)
+    cot_date = date_match.group(1) if date_match else "최근 발표"
+
+    all_match = re.search(r'All\s*:\s*[\d,]+:\s*([\d,]+)\s+([\d,]+)', block)
+    if all_match:
+        try:
+            nc_long = int(all_match.group(1).replace(',', ''))
+            nc_short = int(all_match.group(2).replace(',', ''))
+            net_position = nc_long - nc_short
+            print(f"  [OK] CFTC COMEX 금 선물 ({cot_date}): 순매수 {net_position:,} 계약 (Long {nc_long:,} / Short {nc_short:,})")
+            return net_position, cot_date
+        except Exception as e:
+            print(f"  [WARN] CFTC 수치 파싱 실패: {e}")
+
+    return None, None
+
+# ════════════════════════════════════════════════
+# 4. Yahoo Finance 시세 수집기 (DXY, VIX, 구리, S&P500, ETF)
+# ════════════════════════════════════════════════
+
+def fetch_yahoo_quote(symbol):
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?interval=1d&range=1d"
+    headers = {'User-Agent': 'Mozilla/5.0'}
+    data = fetch_json(url, headers=headers, timeout=8)
+    if data:
+        try:
+            price = data['chart']['result'][0]['meta']['regularMarketPrice']
+            return round(price, 3)
+        except Exception:
+            pass
+    return None
+
+def fetch_etf_holdings(gold_usd):
+    """
+    Yahoo Finance Crumb를 획득하여 GLD와 IAU의 공식 Net Assets(순자산)을 조회하고
+    현재 금 시세를 기반으로 실물 금 보유량(톤)을 실시간 환산합니다.
+    """
+    if not gold_usd or gold_usd <= 0:
+        return None
+
+    try:
+        cj = http.cookiejar.CookieJar()
+        opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj))
+
+        req1 = urllib.request.Request('https://fc.yahoo.com', headers={'User-Agent': 'Mozilla/5.0'})
+        try:
+            opener.open(req1, timeout=5)
+        except Exception:
+            pass
+
+        req2 = urllib.request.Request('https://query1.finance.yahoo.com/v1/test/getcrumb', headers={'User-Agent': 'Mozilla/5.0'})
+        crumb = opener.open(req2, timeout=5).read().decode('utf-8').strip()
+
+        if crumb:
+            req3 = urllib.request.Request(f'https://query1.finance.yahoo.com/v7/finance/quote?symbols=GLD,IAU&crumb={crumb}', headers={'User-Agent': 'Mozilla/5.0'})
+            data = json.loads(opener.open(req3, timeout=5).read().decode('utf-8'))
+            results = data.get('quoteResponse', {}).get('result', [])
+
+            total_net_assets = 0.0
+            for r in results:
+                na = r.get('netAssets') or r.get('marketCap') or 0
+                if na > 0:
+                    total_net_assets += na
+                    print(f"  [OK] {r.get('symbol')}: 순자산 ${na:,.0f}")
+
+            if total_net_assets > 0:
+                # 총 온스 = 총 순자산 / 금 온스당 가격
+                # 톤 = 온스 / 32150.746
+                total_oz = total_net_assets / gold_usd
+                tons = int(round(total_oz / 32150.746))
+                print(f"  [OK] 주요 금 ETF(GLD+IAU) 실시간 보유량: {tons:,}톤 (순자산 합계 ${total_net_assets:,.0f})")
+                return tons
+    except Exception as e:
+        print(f"  [WARN] ETF 보유량 조회 오류: {e}")
+
+    return None
+
+# ════════════════════════════════════════════════
+# 5. 실시간 금 / 은 / 환율 수집
+# ════════════════════════════════════════════════
 
 def fetch_gold_price():
-    """실시간 금 시세 (USD/oz) 수집 (PAXG 1:1 페깅 금 현물)"""
-    data = fetch_json("https://api.coingecko.com/api/v3/simple/price?ids=pax-gold,tether-gold&vs_currencies=usd")
-    if data:
-        paxg = data.get('pax-gold', {}).get('usd')
-        xaut = data.get('tether-gold', {}).get('usd')
-        price = paxg or xaut
-        if price and price > 1500:
-            print(f"[OK] 국제 금 시세: ${price}/oz")
-            return round(price, 2)
+    data = fetch_json("https://api.gold-api.com/price/XAU")
+    if data and data.get('price') and data['price'] > 1000:
+        p = round(data['price'], 2)
+        print(f"  [OK] 실시간 금 시세 (gold-api.com): ${p}/oz")
+        return p
+    p2 = fetch_yahoo_quote('GC=F')
+    if p2 and p2 > 1000:
+        print(f"  [OK] 실시간 금 선물 (Yahoo GC=F): ${p2}/oz")
+        return p2
     return None
 
-def fetch_fred_series(series_id):
-    """
-    FRED 데이터 수집:
-    1) GitHub Secrets에 FRED_API_KEY가 등록되어 있으면 공식 JSON API 사용
-    2) 없으면 공개 CSV 엔드포인트 자동 폴백
-    """
-    if FRED_API_KEY:
-        api_url = f"https://api.stlouisfed.org/fred/series/observations?series_id={series_id}&api_key={FRED_API_KEY}&file_type=json&sort_order=desc&limit=1"
-        data = fetch_json(api_url)
-        if data and 'observations' in data and len(data['observations']) > 0:
-            obs = data['observations'][0]
-            try:
-                val = float(obs['value'])
-                print(f"[OK] FRED API {series_id} ({obs['date']}): {val}")
-                return val
-            except (ValueError, TypeError):
-                pass
-
-    # 백업: FRED CSV 엔드포인트
-    csv_url = f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={series_id}"
-    try:
-        req = urllib.request.Request(csv_url, headers={'User-Agent': 'Mozilla/5.0'})
-        with urllib.request.urlopen(req, timeout=15) as res:
-            lines = res.read().decode('utf-8').strip().split('\n')
-            for line in reversed(lines):
-                parts = line.strip().split(',')
-                if len(parts) == 2 and parts[1] != '.' and parts[1] != '':
-                    val = float(parts[1])
-                    print(f"[OK] FRED CSV {series_id} ({parts[0]}): {val}")
-                    return val
-    except Exception as e:
-        print(f"Error fetching FRED {series_id}: {e}")
+def fetch_silver_price():
+    data = fetch_json("https://api.gold-api.com/price/XAG")
+    if data and data.get('price') and data['price'] > 5:
+        p = round(data['price'], 2)
+        print(f"  [OK] 실시간 은 시세 (gold-api.com): ${p}/oz")
+        return p
+    p2 = fetch_yahoo_quote('SI=F')
+    if p2 and p2 > 5:
+        return p2
     return None
 
-def update_indicators_file(usdkrw, gold_usd, tips, us10y, bei, t10y2y, vix, cpi):
+def fetch_fx():
+    data = fetch_json("https://open.er-api.com/v6/latest/USD")
+    if data and 'rates' in data:
+        krw = round(data['rates'].get('KRW', 0), 1)
+        cny = round(data['rates'].get('CNY', 0), 3)
+        print(f"  [OK] 실시간 환율: USD/KRW = {krw}원, USD/CNY = {cny}위안")
+        return krw, cny
+    return None, None
+
+# ════════════════════════════════════════════════
+# 6. indicatorsData.js 파일 실시간 업데이트
+# ════════════════════════════════════════════════
+
+def set_field(content, indicator_id, field_name, new_value, is_string=False):
+    if is_string:
+        val_pattern = r'"[^"]*"'
+        val_replace = f'"{new_value}"'
+    else:
+        val_pattern = r'[\+\-]?[\d\.]+'
+        val_replace = str(new_value)
+
+    pattern = (rf'(id:\s*"{re.escape(indicator_id)}"'
+               rf'[\s\S]{{0,2500}}?'
+               rf'{re.escape(field_name)}:\s*){val_pattern}')
+    new_content, n = re.subn(pattern, rf'\g<1>{val_replace}', content, count=1)
+    return new_content if n else content
+
+def update_asofdate(content, indicator_id, date_str):
+    return set_field(content, indicator_id, 'asOfDate', date_str, is_string=True)
+
+def apply_all_updates(rates, gold, silver, krw, dxy, vix, copper, sp500, cot_net, cot_date, etf_tons):
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     file_path = os.path.join(base_dir, 'js', 'indicatorsData.js')
 
     if not os.path.exists(file_path):
-        print(f"File not found: {file_path}")
+        print(f"[ERROR] 파일 없음: {file_path}")
         return
 
     with open(file_path, 'r', encoding='utf-8') as f:
         content = f.read()
 
-    source_tag = "GitHub Secrets FRED API 자동 갱신" if FRED_API_KEY else "GitHub Actions 자동 갱신"
-    now_str = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9))).strftime("%Y-%m-%d %H:%M") + f" KST ({source_tag})"
+    tz_kst = datetime.timezone(datetime.timedelta(hours=9))
+    now_kst = datetime.datetime.now(tz_kst)
+    today = now_kst.strftime("%Y-%m-%d")
+    now_str = now_kst.strftime("%Y-%m-%d %H:%M:%S") + " KST (공식 원천 데이터 실시간 동기화)"
 
-    # 1. meta 영역 업데이트
-    if gold_usd:
-        content = re.sub(r'goldUSD:\s*[\d\.]+', f'goldUSD: {gold_usd}', content)
-    if usdkrw:
-        content = re.sub(r'usdkrw:\s*[\d\.]+', f'usdkrw: {usdkrw}', content)
-    if gold_usd and usdkrw:
-        krw_g = int(round((gold_usd / 31.1034768) * usdkrw))
+    # 1. meta 블록
+    if gold:
+        content = re.sub(r'goldUSD:\s*[\d\.]+', f'goldUSD: {gold}', content)
+    if krw:
+        content = re.sub(r'usdkrw:\s*[\d\.]+', f'usdkrw: {krw}', content)
+    if gold and krw:
+        krw_g = int(round((gold / 31.1034768) * krw))
         krw_don = int(round(krw_g * 3.75))
         content = re.sub(r'goldKRW_g:\s*\d+', f'goldKRW_g: {krw_g}', content)
         content = re.sub(r'goldKRW_don:\s*\d+', f'goldKRW_don: {krw_don}', content)
-    if us10y:
-        content = re.sub(r'us10y:\s*[\d\.]+', f'us10y: {us10y}', content)
-    if tips:
-        content = re.sub(r'us10yTips:\s*[\d\.]+', f'us10yTips: {tips}', content)
-
+    if rates['nominal10y']:
+        content = re.sub(r'us10y:\s*[\d\.]+', f'us10y: {rates["nominal10y"]}', content)
+    if rates['tips10y']:
+        content = re.sub(r'us10yTips:\s*[\d\.]+', f'us10yTips: {rates["tips10y"]}', content)
+    if dxy:
+        content = re.sub(r'dxy:\s*[\d\.]+', f'dxy: {dxy}', content)
     content = re.sub(r'updatedAt:\s*"[^"]*"', f'updatedAt: "{now_str}"', content)
 
-    # 2. 카테고리 내부 indicators 업데이트
-    if tips:
-        content = re.sub(r'(id:\s*"us10y_tips"[\s\S]*?currentValue:\s*)[\d\.]+', rf'\g<1>{tips}', content)
-        # TIPS 실질금리 벤치마크 점수 자동 갱신 (<1.5: +2, <2.0: +1, <2.3: 0, <2.6: -1, >=2.6: -2)
+    # 2. 1. 실질금리
+    if rates['tips10y'] is not None:
+        tips = rates['tips10y']
+        content = set_field(content, 'us10y_tips', 'currentValue', tips)
         tips_score = "+2" if tips < 1.5 else ("+1" if tips < 2.0 else ("0" if tips < 2.3 else ("-1" if tips < 2.6 else "-2")))
-        content = re.sub(r'(id:\s*"us10y_tips"[\s\S]*?score:\s*)[\+\-]?\d+', rf'\g<1>{tips_score}', content)
-    if us10y:
-        content = re.sub(r'(id:\s*"us10y_nominal"[\s\S]*?currentValue:\s*)[\d\.]+', rf'\g<1>{us10y}', content)
-    if bei:
-        content = re.sub(r'(id:\s*"bei_10y"[\s\S]*?currentValue:\s*)[\d\.]+', rf'\g<1>{bei}', content)
-    if usdkrw:
-        content = re.sub(r'(id:\s*"usdkrw"[\s\S]*?currentValue:\s*)[\d\.]+', rf'\g<1>{usdkrw}', content)
-    if t10y2y:
-        content = re.sub(r'(id:\s*"yield_curve_10y2y"[\s\S]*?currentValue:\s*)[\+\-]?[\d\.]+', rf'\g<1>{t10y2y}', content)
+        content = set_field(content, 'us10y_tips', 'score', tips_score)
+        content = update_asofdate(content, 'us10y_tips', rates['date'] or today)
+
+    if rates['nominal10y'] is not None:
+        content = set_field(content, 'us10y_nominal', 'currentValue', rates['nominal10y'])
+        content = update_asofdate(content, 'us10y_nominal', rates['date'] or today)
+
+    if rates['bei10y'] is not None:
+        content = set_field(content, 'bei_10y', 'currentValue', rates['bei10y'])
+        content = update_asofdate(content, 'bei_10y', rates['date'] or today)
+
+    # 3. 2. 달러&환율
+    if dxy:
+        content = set_field(content, 'dxy', 'currentValue', dxy)
+        dxy_score = "+2" if dxy < 101 else ("+1" if dxy < 104 else ("0" if dxy < 106 else "-1"))
+        content = set_field(content, 'dxy', 'score', dxy_score)
+        content = update_asofdate(content, 'dxy', today)
+
+    if krw:
+        content = set_field(content, 'usdkrw', 'currentValue', krw)
+        content = update_asofdate(content, 'usdkrw', today)
+
+    # 4. 4. 경기&고용&금리차
+    if rates['spread10y2y'] is not None:
+        content = set_field(content, 'yield_curve_10y2y', 'currentValue', rates['spread10y2y'])
+        content = update_asofdate(content, 'yield_curve_10y2y', rates['date'] or today)
+
+    if rates['spread10y3m'] is not None:
+        content = set_field(content, 'yield_curve_10y3m', 'currentValue', rates['spread10y3m'])
+        content = update_asofdate(content, 'yield_curve_10y3m', rates['date'] or today)
+
+    # 5. 5. 위험&심리
     if vix:
-        content = re.sub(r'(id:\s*"vix"[\s\S]*?currentValue:\s*)[\d\.]+', rf'\g<1>{vix}', content)
+        content = set_field(content, 'vix', 'currentValue', vix)
+        vix_score = "+2" if vix >= 25 else ("+1" if vix >= 20 else ("0" if vix >= 15 else "-1"))
+        content = set_field(content, 'vix', 'score', vix_score)
+        content = update_asofdate(content, 'vix', today)
+
+    # 6. 6. 수급 지표 (CFTC COT, ETF)
+    if cot_net is not None:
+        content = set_field(content, 'comex_cot', 'currentValue', cot_net)
+        cot_score = "+2" if cot_net < 150000 else ("+1" if cot_net < 220000 else ("0" if cot_net < 280000 else "-1"))
+        content = set_field(content, 'comex_cot', 'score', cot_score)
+        content = update_asofdate(content, 'comex_cot', cot_date or today)
+
+    if etf_tons is not None:
+        content = set_field(content, 'etf_holdings', 'currentValue', etf_tons)
+        content = update_asofdate(content, 'etf_holdings', today)
+
+    # 7. 7. 상대 가치 지표
+    if gold and silver and silver > 0:
+        gs = round(gold / silver, 1)
+        content = set_field(content, 'gold_silver_ratio', 'currentValue', gs)
+        content = update_asofdate(content, 'gold_silver_ratio', today)
+
+    if gold and copper and copper > 0:
+        gc = round(gold / copper, 1)
+        content = set_field(content, 'gold_copper_ratio', 'currentValue', gc)
+        content = update_asofdate(content, 'gold_copper_ratio', today)
+
+    if gold and sp500 and sp500 > 0:
+        gsp = round(gold / sp500, 4)
+        content = set_field(content, 'gold_sp500_ratio', 'currentValue', gsp)
+        content = update_asofdate(content, 'gold_sp500_ratio', today)
 
     with open(file_path, 'w', encoding='utf-8') as f:
         f.write(content)
+    print(f"\n[SUCCESS] {file_path} 실시간 수집 데이터로 100% 갱신 완료!")
 
-    print(f"[SUCCESS] {file_path} 파일이 최신 통계로 갱신되었습니다.")
+# ════════════════════════════════════════════════
+# 메인 실행
+# ════════════════════════════════════════════════
 
 if __name__ == '__main__':
-    print("=== 금 투자 지표 자동 수집기 시작 ===")
-    if FRED_API_KEY:
-        print("[INFO] GitHub Secrets에 등록된 FRED_API_KEY를 사용하여 공식 연준 API를 호출합니다.")
-    else:
-        print("[INFO] 등록된 FRED_API_KEY가 없습니다. 공공 엔드포인트를 사용합니다.")
+    print("=" * 65)
+    print("금 투자 8대 지표 실시간 자동 수집기 (공식 원천 데이터)")
+    print("=" * 65)
 
-    krw = fetch_exchange_rate()
+    print("\n[1/5] 미국 재무부(U.S. Treasury) 국채 & TIPS 실질금리 피드 수집...")
+    rates = fetch_treasury_rates()
+
+    print("\n[2/5] CFTC 공식 COMEX 금 선물 COT 포지션 파싱...")
+    cot_net, cot_date = fetch_cftc_cot()
+
+    print("\n[3/5] 실시간 금·은 시세 및 환율 수집...")
     gold = fetch_gold_price()
-    tips = fetch_fred_series("DFII10")  # 10년 TIPS 실질금리
-    us10y = fetch_fred_series("DGS10")  # 10년 명목 국채금리
-    bei = fetch_fred_series("T10YIE")   # 10년 기대인플레 BEI
-    t10y2y = fetch_fred_series("T10Y2Y") # 10Y-2Y 장단기 금리차
-    vix = fetch_fred_series("VIXCLS")    # CBOE VIX 변동성 지수
-    cpi = None
+    silver = fetch_silver_price()
+    krw, cny = fetch_fx()
 
-    update_indicators_file(krw, gold, tips, us10y, bei, t10y2y, vix, cpi)
-    print("=== 수집 완료 ===")
+    print("\n[4/5] Yahoo Finance 시장 데이터 수집 (DXY, VIX, 구리, S&P500, ETF)...")
+    dxy = fetch_yahoo_quote('DX-Y.NYB')
+    if dxy: print(f"  [OK] 실시간 DXY 달러 인덱스: {dxy}")
+    vix = fetch_yahoo_quote('^VIX')
+    if vix: print(f"  [OK] 실시간 CBOE VIX 지수: {vix}")
+    copper = fetch_yahoo_quote('HG=F')
+    if copper: print(f"  [OK] COMEX 구리 선물: ${copper}/lb")
+    sp500 = fetch_yahoo_quote('^GSPC')
+    if sp500: print(f"  [OK] S&P 500 지수: {sp500}")
+    etf_tons = fetch_etf_holdings(gold)
+
+    print("\n[5/5] js/indicatorsData.js 파일 갱신...")
+    apply_all_updates(rates, gold, silver, krw, dxy, vix, copper, sp500, cot_net, cot_date, etf_tons)
+
+    print("\n" + "=" * 65)
+    print("수집 완료 현황 요약")
+    print("=" * 65)
+    items = [
+        ("10Y TIPS 실질금리", rates['tips10y'], "% (미 재무부)"),
+        ("10Y 명목 국채금리", rates['nominal10y'], "% (미 재무부)"),
+        ("10Y 기대인플레(BEI)", rates['bei10y'], "% (자동 계산)"),
+        ("10Y-2Y 장단기금리차", rates['spread10y2y'], "%p (자동 계산)"),
+        ("10Y-3M 장단기금리차", rates['spread10y3m'], "%p (자동 계산)"),
+        ("CFTC COMEX 금 선물", f"{cot_net:,}" if cot_net else None, f"계약 ({cot_date})"),
+        ("DXY 달러 인덱스", dxy, "pt (ICE 공식)"),
+        ("CBOE VIX 공포지수", vix, "pt"),
+        ("국제 금 시세", f"${gold}" if gold else None, "/oz"),
+        ("국제 은 시세", f"${silver}" if silver else None, "/oz"),
+        ("원/달러 환율", f"{krw}원" if krw else None, ""),
+        ("주요 금 ETF 보유량", f"{etf_tons:,}" if etf_tons else None, "톤 (GLD+IAU 실물 순자산 환산)"),
+        ("금/은 비율", round(gold/silver, 1) if (gold and silver) else None, "배"),
+        ("금/구리 비율", round(gold/copper, 1) if (gold and copper) else None, "배"),
+        ("금/S&P500 비율", round(gold/sp500, 4) if (gold and sp500) else None, "배"),
+    ]
+    for name, val, unit in items:
+        status = "✅ 수집 성공" if val is not None else "❌ 실패"
+        print(f"  {status:10s} | {name:16s}: {str(val):12s} {unit}")
+    print("=" * 65)

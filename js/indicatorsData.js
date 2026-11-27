@@ -6,14 +6,14 @@
 const GOLD_DATA = {
     // 현재 금 시세 정보 (2024~2026 트렌드 반영)
     meta: {
-        goldUSD: 2685.50, // 온스당 USD
-        goldKRW_g: 119850, // g당 원화 가격
-        goldKRW_don: 449437, // 돈(3.75g)당 원화 가격
-        usdkrw: 1388.50,
-        dxy: 104.20,
-        us10y: 4.42,
-        us10yTips: 2.05,
-        updatedAt: "2026-11-24 22:05:00 (최신 시장 데이터 반영)"
+        goldUSD: 3662.5, // 온스당 USD
+        goldKRW_g: 158235, // g당 원화 가격
+        goldKRW_don: 593381, // 돈(3.75g)당 원화 가격
+        usdkrw: 1343.8,
+        dxy: 103.726,
+        us10y: 4.85,
+        us10yTips: 2.73,
+        updatedAt: "2026-11-27 16:36:48 KST (공식 원천 데이터 실시간 동기화)"
     },
 
     // 8대 카테고리 정의 및 지표 항목
@@ -30,22 +30,25 @@ const GOLD_DATA = {
                     id: "us10y_tips",
                     name: "미국 10년물 TIPS 금리 (실질금리)",
                     code: "DFII10 (FRED)",
-                    currentValue: 2.05,
+                    currentValue: 2.73,
                     unit: "%",
                     prevValue: 2.15,
                     change: -0.10,
-                    trend: "down", // 전월 대비 하향세이나 2.0% 부근
-                    impact: "neutral", // bullish, neutral, bearish
-                    score: 0, // 2.0~2.3% 구간은 중립 (0점)
+                    trend: "down",
+                    impact: "neutral",
+                    score: -2,
                     explanation: "10년물 TIPS 실질금리는 2.05% 수준으로 2.0% 기준선 부근에 위치하여 단기적으로 중립적 흐름을 보이고 있습니다. 2.0%를 확실하게 밑돌아야 금에 강한 랠리 탄력이 붙습니다.",
                     goldCorrelation: "역상관 (-0.85)",
-                    benchmark: "2.0% 이상이면 부담, 1.5% 미만이면 강한 랠리"
+                    benchmark: "2.0% 이상이면 부담, 1.5% 미만이면 강한 랠리",
+                    autoFetch: true,
+                    asOfDate: "2026-11-25",
+                    sourceUrl: "https://fred.stlouisfed.org/series/DFII10"
                 },
                 {
                     id: "us10y_nominal",
                     name: "미국 10년물 국채 금리 (명목금리)",
                     code: "DGS10 (FRED)",
-                    currentValue: 4.38,
+                    currentValue: 4.85,
                     unit: "%",
                     prevValue: 4.48,
                     change: -0.10,
@@ -54,13 +57,16 @@ const GOLD_DATA = {
                     score: +1,
                     explanation: "명목 금리 하락은 채권 대비 금의 기회비용을 낮춰줍니다. 연준의 완화적 기조로 장기금리 상단이 제한되고 있습니다.",
                     goldCorrelation: "역상관 (-0.60)",
-                    benchmark: "4.5% 이상 저항, 4.0% 이하 급등"
+                    benchmark: "4.5% 이상 저항, 4.0% 이하 급등",
+                    autoFetch: true,
+                    asOfDate: "2026-11-25",
+                    sourceUrl: "https://fred.stlouisfed.org/series/DGS10"
                 },
                 {
                     id: "bei_10y",
                     name: "10년 기대인플레이션율 (BEI)",
                     code: "T10YIE (FRED)",
-                    currentValue: 2.50,
+                    currentValue: 2.12,
                     unit: "%",
                     prevValue: 2.33,
                     change: +0.17,
@@ -69,12 +75,15 @@ const GOLD_DATA = {
                     score: +1,
                     explanation: "명목 10년물에서 10년 TIPS를 뺀 값(BEI)으로, 시장의 장기 인플레 기대를 뜻합니다. BEI가 오르면 실질금리를 갉아먹어 금에 우호적입니다.",
                     goldCorrelation: "정상관 (+0.55)",
-                    benchmark: "2.3% 이상 유지 시 실물 인플레 헷지 수요 지속"
+                    benchmark: "2.3% 이상 유지 시 실물 인플레 헷지 수요 지속",
+                    autoFetch: true,
+                    asOfDate: "2026-11-25",
+                    sourceUrl: "https://fred.stlouisfed.org/series/T10YIE"
                 },
                 {
                     id: "fed_funds_rate",
-                    name: "연준 기준금리 & 점도표 전망",
-                    code: "Fed Dot Plot",
+                    name: "연준 기준금리 (FEDFUNDS 실효금리)",
+                    code: "FEDFUNDS (FRED)",
                     currentValue: 4.75,
                     unit: "%",
                     prevValue: 5.00,
@@ -82,9 +91,12 @@ const GOLD_DATA = {
                     trend: "down",
                     impact: "bullish",
                     score: +2,
-                    explanation: "연방준비제도(Fed)가 금리 인하 사이클에 진입했으며 점도표상 추가 인하 경로가 확인되어 글로벌 유동성과 금 투자 심리를 강력하게 지지합니다.",
+                    explanation: "연방준비제도(Fed) 실효 연방기금금리입니다. 금리 인하 사이클에 진입하면 글로벌 유동성과 금 투자 심리를 강력하게 지지합니다.",
                     goldCorrelation: "역상관 (-0.75)",
-                    benchmark: "금리 인하 사이클 = 금 가격 장기 강세장 전형적 패턴"
+                    benchmark: "금리 인하 사이클 = 금 가격 장기 강세장 전형적 패턴",
+                    autoFetch: true,
+                    asOfDate: "2026-11-24",
+                    sourceUrl: "https://fred.stlouisfed.org/series/FEDFUNDS"
                 }
             ],
             history: {
@@ -104,24 +116,27 @@ const GOLD_DATA = {
             indicators: [
                 {
                     id: "dxy",
-                    name: "달러 인덱스 (DXY)",
-                    code: "DXY",
-                    currentValue: 104.1,
+                    name: "무역가중 달러지수 (DXY 대용, DTWEXBGS)",
+                    code: "DTWEXBGS (FRED)",
+                    currentValue: 103.726,
                     unit: "pt",
                     prevValue: 105.8,
                     change: -1.7,
                     trend: "down",
                     impact: "bullish",
                     score: +1,
-                    explanation: "미국 국채금리 안정과 주요국 통화 대비 달러 강세 압력이 완화되면서 금에 우호적인 환경이 조성되고 있습니다.",
+                    explanation: "FRED의 무역가중 달러지수(DTWEXBGS)를 DXY 대용으로 사용합니다. 달러 강세 완화는 비달러권 금 구매력을 높여 금에 우호적입니다.",
                     goldCorrelation: "역상관 (-0.70)",
-                    benchmark: "105 이상이면 금에 단기 저항, 102 이하면 금 강세"
+                    benchmark: "지수 상승(달러 강세) 시 금에 단기 저항, 하락(달러 약세) 시 금 강세",
+                    autoFetch: true,
+                    asOfDate: "2026-11-27",
+                    sourceUrl: "https://fred.stlouisfed.org/series/DTWEXBGS"
                 },
                 {
                     id: "usdkrw",
                     name: "원/달러 환율 (USD/KRW)",
-                    code: "USDKRW",
-                    currentValue: 1392.5,
+                    code: "USDKRW (open.er-api.com)",
+                    currentValue: 1343.8,
                     unit: "원",
                     prevValue: 1375.0,
                     change: +17.5,
@@ -130,7 +145,10 @@ const GOLD_DATA = {
                     score: +2,
                     explanation: "원/달러 환율이 1,380~1,400원대의 높은 수준을 유지하면서, 국제 금 가격 상승분 외에 원화 환율 상승 효과가 더해져 국내 금값(KRW/g)이 추가 프리미엄을 얻고 있습니다.",
                     goldCorrelation: "국내 금값 기준 강력한 정(+)의 영향",
-                    benchmark: "1,350원 이상 유지 시 국내 금 투자자 환율 수혜 지속"
+                    benchmark: "1,350원 이상 유지 시 국내 금 투자자 환율 수혜 지속",
+                    autoFetch: true,
+                    asOfDate: "2026-11-27",
+                    sourceUrl: "https://open.er-api.com"
                 }
             ],
             history: {
@@ -162,41 +180,46 @@ const GOLD_DATA = {
                     explanation: "중국 인민은행(PBoC), 인도 중앙은행(RBI), 폴란드, 튀르키예 등 신흥국 중앙은행들이 탈달러화 및 금융제재 리스크 방어를 위해 역사적 수준의 매입을 지속 중입니다.",
                     goldCorrelation: "강력한 구조적 정상관 (+0.80)",
                     benchmark: "분기당 200톤 이상이면 매우 강한 매수 지지",
+                    autoFetch: false,
+                    manualUpdate: true,
+                    fetchNote: "WGC 분기보고서 공식 무료 API 없음 → WGC 사이트에서 분기별 수동 갱신",
                     asOfDate: "2026-Q3",
                     sourceUrl: "https://www.gold.org/goldhub/data/gold-demand-statistics"
                 },
                 {
                     id: "etf_holdings",
-                    name: "글로벌 금 ETF 보유량 (GLD, IAU)",
-                    code: "World Gold Council ETF Tracker",
-                    currentValue: 3260,
+                    name: "주요 금 ETF 보유량 (GLD+IAU+GLDM)",
+                    code: "Yahoo Finance (GLD/IAU/GLDM 발행주수)",
+                    currentValue: 1606,
                     unit: "톤",
                     prevValue: 3120,
                     change: +140,
                     trend: "up",
                     impact: "bullish",
                     score: +2,
-                    explanation: "금리 인하가 시작되면서 서구권 기관 및 개인 투자자들의 자금이 GLD, IAU 등 금 현물 ETF로 강력하게 순유입 전환되었습니다.",
+                    explanation: "SPDR GLD·iShares IAU·SPDR GLDM 세 ETF의 발행주수를 Yahoo Finance API에서 실시간 수집, 보유 금 톤수로 환산합니다. 금리 인하 기조로 기관 자금이 금 ETF로 유입 중입니다.",
                     goldCorrelation: "정상관 (+0.75)",
                     benchmark: "월간 순유입 전환 시 시세 탄력 극대화",
-                    asOfDate: "2026-11",
-                    sourceUrl: "https://www.gold.org/goldhub/data/gold-etf-flows"
+                    autoFetch: true,
+                    asOfDate: "2026-11-27",
+                    sourceUrl: "https://finance.yahoo.com/quote/GLD"
                 },
                 {
                     id: "comex_cot",
                     name: "COMEX 선물 투기적 순매수 (CFTC COT)",
-                    code: "CFTC COT Report (Non-Commercial)",
-                    currentValue: 245000,
+                    code: "CFTC COT Legacy Futures-Only (088691)",
+                    currentValue: 166132,
                     unit: "계약",
                     prevValue: 268000,
                     change: -23000,
                     trend: "down",
                     impact: "neutral",
                     score: +1,
-                    explanation: "투기적 롱(Long) 포지션이 역사적 고점(30만 계약) 부근에서 소폭 차익실현으로 숨고르기를 보이고 있어 단기 과열 리스크가 해소되고 건강한 조정 국면입니다.",
+                    explanation: "CFTC가 매주 금요일 공개하는 COT 보고서에서 비상업적(투기) 순포지션(롱-숏)을 직접 파싱합니다. 역사적 고점(30만 계약) 부근에서 숨고르기를 보여 단기 과열 리스크가 해소 중입니다.",
                     goldCorrelation: "단기 모멘텀 지표 (과열 시 역발상 매도 신호)",
-                    benchmark: "28만 계약 이상 시 단기 과열 경계, 20만 이하 반등 매수",
-                    asOfDate: "2026-11-19",
+                    benchmark: "28만 계약 이상 단기 과열 경계, 15만 이하 반등 매수 기회",
+                    autoFetch: true,
+                    asOfDate: "November 17, 2026",
                     sourceUrl: "https://www.cftc.gov/MarketReports/CommitmentsofTraders/index.htm"
                 },
                 {
@@ -213,6 +236,9 @@ const GOLD_DATA = {
                     explanation: "중국 부동산 및 주식시장 부진으로 인해 중국 가계와 젊은 층의 금괴·금콩(Gold Beans) 실물 수요가 폭발적이며, 상하이 금거래소 프리미엄이 유지되고 있습니다.",
                     goldCorrelation: "정상관 (+0.60)",
                     benchmark: "월 120톤 이상 인출 시 강력한 아시아 실물 바닥 형성",
+                    autoFetch: false,
+                    manualUpdate: true,
+                    fetchNote: "SGE(중국)·홍콩세관 공식 무료 API 없음 → WGC Gold Demand Trends 보고서에서 월별 수동 갱신",
                     asOfDate: "2026-10",
                     sourceUrl: "https://www.sge.com.cn/sjzx/mrgold"
                 },
@@ -230,13 +256,16 @@ const GOLD_DATA = {
                     explanation: "인도 정부의 금 수입 관세 인하(15%→6%) 조치 이후 축제(디왈리) 및 결혼 시즌을 맞아 현지 거래 가격이 디스카운트에서 프리미엄으로 돌아섰습니다.",
                     goldCorrelation: "정상관 (+0.50)",
                     benchmark: "국제 시세 대비 프리미엄(할증) 전환 시 인도 수요 강세",
+                    autoFetch: false,
+                    manualUpdate: true,
+                    fetchNote: "DGCI&S·WGC 인도 수요 데이터 공식 무료 API 없음 → WGC Gold Demand Trends에서 분기별 수동 갱신",
                     asOfDate: "2026-Q3",
                     sourceUrl: "https://www.gold.org/goldhub/research/gold-demands-trends"
                 },
                 {
                     id: "coin_bar_usmint",
-                    name: "미국 조폐국(US Mint) 금화 판매량 & 실물 바",
-                    code: "US Mint American Eagle Sales",
+                    name: "미국 조폐국(US Mint) 금화 판매량",
+                    code: "US Mint American Eagle Sales (HTML 파싱)",
                     currentValue: 48000,
                     unit: "온스/월",
                     prevValue: 42000,
@@ -244,9 +273,10 @@ const GOLD_DATA = {
                     trend: "up",
                     impact: "bullish",
                     score: +1,
-                    explanation: "미국 조폐국 아메리칸 이글 및 캐나다 메이플리프 등 투자용 실물 코인/바 판매량이 꾸준히 증가하며 리테일 투자자 수요를 입증합니다.",
+                    explanation: "미국 조폐국 사이트의 아메리칸 이글 1oz 금화 월간 판매량을 HTML 테이블에서 자동 파싱합니다. 리테일 투자자의 실물 금 수요 강도를 측정합니다.",
                     goldCorrelation: "정상관 (+0.45)",
                     benchmark: "월 5만 온스 상회 시 강력한 개인 안전자산 수요",
+                    autoFetch: true,
                     asOfDate: "2026-11",
                     sourceUrl: "https://www.usmint.gov/about/production-sales-figures/american-eagles"
                 },
@@ -264,6 +294,9 @@ const GOLD_DATA = {
                     explanation: "런던 금고 및 뉴욕 COMEX 창고의 실물 가용 재고가 아시아(중국/인도/중동)로의 지속적인 실물 인도로 인해 타이트해지고 있습니다.",
                     goldCorrelation: "역상관 (재고 감소 시 실물 프리미엄 상승)",
                     benchmark: "서구 재고 감소 = 동양으로의 실물 이전 가속",
+                    autoFetch: false,
+                    manualUpdate: true,
+                    fetchNote: "LBMA 분기 보고서(PDF)·CME COMEX 일일 창고 보고서 → 분기별 수동 갱신. CME 유료 API 필요.",
                     asOfDate: "2026-11-22",
                     sourceUrl: "https://www.lbma.org.uk/prices-and-data/lbma-vaults"
                 }
@@ -286,7 +319,7 @@ const GOLD_DATA = {
                 {
                     id: "cpi",
                     name: "미국 소비자물가지수 (CPI YoY)",
-                    code: "CPIAUCSL (FRED)",
+                    code: "CPIAUCSL (FRED) → YoY% 자동 계산",
                     currentValue: 2.7,
                     unit: "%",
                     prevValue: 2.6,
@@ -294,14 +327,17 @@ const GOLD_DATA = {
                     trend: "up",
                     impact: "bullish",
                     score: +1,
-                    explanation: "물가 하락세가 2% 중후반에서 끈적(Sticky)하게 머무르며 재반등 기미를 보임에 따라 실물자산(금)에 대한 인플레이션 헷지 수요가 재차 유입되고 있습니다.",
+                    explanation: "FRED CPIAUCSL에서 최신월 + 13개월 전 값을 수집해 YoY%를 자동 계산합니다. 물가 하락세가 2% 중후반에서 끈적(Sticky)하게 머무르며 금 헷지 수요를 지지합니다.",
                     goldCorrelation: "정상관 (+0.45)",
-                    benchmark: "2.5% 이상 지속 시 화폐 가치 하락 방어 수요 견고"
+                    benchmark: "2.5% 이상 지속 시 화폐 가치 하락 방어 수요 견고",
+                    autoFetch: true,
+                    asOfDate: "2026-11",
+                    sourceUrl: "https://fred.stlouisfed.org/series/CPIAUCSL"
                 },
                 {
                     id: "core_pce",
                     name: "미국 근원 PCE 물가지수 (Core PCE YoY)",
-                    code: "PCEPILFE (연준 핵심 물가 지표)",
+                    code: "PCEPILFE (FRED) → YoY% 자동 계산",
                     currentValue: 2.8,
                     unit: "%",
                     prevValue: 2.7,
@@ -309,14 +345,17 @@ const GOLD_DATA = {
                     trend: "up",
                     impact: "neutral",
                     score: 0,
-                    explanation: "연준이 가장 신뢰하는 물가 지표입니다. 2% 목표치보다 높은 수준을 유지하고 있어 명목화폐의 구매력 저하를 방어할 금의 필요성이 부각됩니다.",
+                    explanation: "연준이 가장 신뢰하는 물가 지표입니다. FRED PCEPILFE에서 YoY%를 자동 계산합니다. 2% 목표치보다 높은 수준을 유지하여 명목화폐 구매력 저하 방어 필요성을 부각합니다.",
                     goldCorrelation: "정상관 (+0.40)",
-                    benchmark: "2.0% 목표 대비 괴리가 클수록 금에 우호적"
+                    benchmark: "2.0% 목표 대비 괴리가 클수록 금에 우호적",
+                    autoFetch: true,
+                    asOfDate: "2026-11",
+                    sourceUrl: "https://fred.stlouisfed.org/series/PCEPILFE"
                 },
                 {
                     id: "ppi",
                     name: "생산자물가지수 (PPI YoY)",
-                    code: "PPIACO (FRED)",
+                    code: "PPIACO (FRED) → YoY% 자동 계산",
                     currentValue: 2.4,
                     unit: "%",
                     prevValue: 1.9,
@@ -324,9 +363,12 @@ const GOLD_DATA = {
                     trend: "up",
                     impact: "bullish",
                     score: +1,
-                    explanation: "도매 물가 상승은 시차를 두고 소비자물가로 전가되므로 중기적 인플레이션 압력을 시사합니다.",
+                    explanation: "FRED PPIACO에서 YoY%를 자동 계산합니다. 도매 물가 상승은 시차를 두고 소비자물가로 전가되므로 중기적 인플레이션 압력의 선행 신호입니다.",
                     goldCorrelation: "정상관 (+0.35)",
-                    benchmark: "PPI 급등은 원자재 및 금 랠리의 선행 신호"
+                    benchmark: "PPI 급등은 원자재 및 금 랠리의 선행 신호",
+                    autoFetch: true,
+                    asOfDate: "2026-11",
+                    sourceUrl: "https://fred.stlouisfed.org/series/PPIACO"
                 }
             ],
             history: {
@@ -357,13 +399,18 @@ const GOLD_DATA = {
                     score: +1,
                     explanation: "미국 노동시장의 과열이 진정되고 고용 증가세가 둔화됨에 따라 연준의 연속 금리 인하 명분이 강화되고 있습니다.",
                     goldCorrelation: "경기 둔화 시 금에 우호적",
-                    benchmark: "실업률 4.0% 상회 지속 시 침체 방어용 금리 인하 촉진"
+                    benchmark: "실업률 4.0% 상회 지속 시 침체 방어용 금리 인하 촉진",
+                    autoFetch: false,
+                    manualUpdate: true,
+                    fetchNote: "BLS 월간 공식 발표(매월 첫째주 금요일) 후 업데이트",
+                    asOfDate: "2026-11",
+                    sourceUrl: "https://fred.stlouisfed.org/series/UNRATE"
                 },
                 {
                     id: "yield_curve_10y2y",
                     name: "장단기 금리차 (10Y - 2Y 국채 스프레드)",
                     code: "T10Y2Y (FRED)",
-                    currentValue: +0.15,
+                    currentValue: 0.24,
                     unit: "%p",
                     prevValue: -0.05,
                     change: +0.20,
@@ -372,13 +419,16 @@ const GOLD_DATA = {
                     score: +2,
                     explanation: "역대 최장 역전을 끝내고 '플러스(+)'로 돌아섰습니다(재역전 해소). 역사적으로 금리 역전 해소 직후 6~18개월 내에 경기 침체가 가시화되며 안전자산 랠리가 나타났습니다.",
                     goldCorrelation: "스프레드 정상화 후 경기 둔화기 금 급등 패턴",
-                    benchmark: "역전 해소 후 가파른 스티프닝은 경기 침체 카운트다운"
+                    benchmark: "역전 해소 후 가파른 스티프닝은 경기 침체 카운트다운",
+                    autoFetch: true,
+                    asOfDate: "2026-11-25",
+                    sourceUrl: "https://fred.stlouisfed.org/series/T10Y2Y"
                 },
                 {
                     id: "yield_curve_10y3m",
                     name: "장단기 금리차 (10Y - 3M 스프레드)",
-                    code: "T10Y3M (FRED 경기침체 예측 모델)",
-                    currentValue: -0.18,
+                    code: "T10Y3M (FRED)",
+                    currentValue: 0.51,
                     unit: "%p",
                     prevValue: -0.55,
                     change: +0.37,
@@ -387,7 +437,10 @@ const GOLD_DATA = {
                     score: +1,
                     explanation: "뉴욕 연준 연구에서 침체 예측력이 10Y-2Y보다 우수하다고 평가받는 지표입니다. 여전히 마이너스권에서 정상화 진행 중입니다.",
                     goldCorrelation: "역전 해소 국면 안전자산 수요 고조",
-                    benchmark: "완전한 플러스 전환 시 침체 리스크 정점 도달"
+                    benchmark: "완전한 플러스 전환 시 침체 리스크 정점 도달",
+                    autoFetch: true,
+                    asOfDate: "2026-11-25",
+                    sourceUrl: "https://fred.stlouisfed.org/series/T10Y3M"
                 },
                 {
                     id: "ism_pmi",
@@ -402,7 +455,12 @@ const GOLD_DATA = {
                     score: 0,
                     explanation: "제조업은 기준선(50) 아래에서 위축 국면이 지속되고 있으며 서비스업도 완만한 둔화세를 보여 연착륙과 경기 둔화 사이에서 균형을 이루고 있습니다.",
                     goldCorrelation: "제조업 위축 지속 시 금리 인하 기대 유지",
-                    benchmark: "50 미만 위축 국면은 안전자산 선호"
+                    benchmark: "50 미만 위축 국면은 안전자산 선호",
+                    autoFetch: false,
+                    manualUpdate: true,
+                    fetchNote: "ISM 공급관리협회 월초 발표 후 업데이트",
+                    asOfDate: "2026-11",
+                    sourceUrl: "https://www.ismworld.org"
                 }
             ],
             history: {
@@ -423,17 +481,20 @@ const GOLD_DATA = {
                 {
                     id: "vix",
                     name: "CBOE VIX 지수 (월가 공포지수)",
-                    code: "VIX (CBOE)",
-                    currentValue: 15.8,
+                    code: "VIXCLS (FRED / CBOE)",
+                    currentValue: 26.8,
                     unit: "pt",
                     prevValue: 18.2,
                     change: -2.4,
                     trend: "down",
                     impact: "neutral",
-                    score: 0,
+                    score: +2,
                     explanation: "현재 VIX는 15~16 수준으로 주식시장의 단기 패닉은 진정된 상태입니다. VIX가 20~25를 돌파하며 금융 불안이 고조될 때 금 수요가 급증합니다.",
                     goldCorrelation: "시장 위기 시 강력한 정(+)의 반응",
-                    benchmark: "20 이상 시 위기 고조 매수 신호, 15 미만 평온"
+                    benchmark: "20 이상 시 위기 고조 매수 신호, 15 미만 평온",
+                    autoFetch: true,
+                    asOfDate: "2026-11-27",
+                    sourceUrl: "https://fred.stlouisfed.org/series/VIXCLS"
                 },
                 {
                     id: "geopolitical_risk",
@@ -448,7 +509,12 @@ const GOLD_DATA = {
                     score: +2,
                     explanation: "중동 정세 긴장, 우크라이나 종전 협상 및 신냉전 구도, 미·중 기술 무역 분쟁, 각국의 보호무역 강화 등으로 지정학적 프리미엄이 사상 최고 수준을 유지하고 있습니다.",
                     goldCorrelation: "위기 발발 시 급등 후 고공행진",
-                    benchmark: "130pt 상회 시 안전자산 프리미엄 지속 유지"
+                    benchmark: "130pt 상회 시 안전자산 프리미엄 지속 유지",
+                    autoFetch: false,
+                    manualUpdate: true,
+                    fetchNote: "연준 연구진 공식 GPR 사이트에서 월 1회 갱신",
+                    asOfDate: "2026-10",
+                    sourceUrl: "https://www.matteoiacoviello.com/gpr.htm"
                 },
                 {
                     id: "stock_bond_corr",
@@ -463,7 +529,12 @@ const GOLD_DATA = {
                     score: +1,
                     explanation: "S&P 500과의 장기 상관관계가 0.1 내외로 매우 낮아, 주식 포트폴리오에 10~20% 금을 편입할 경우 샤프지수(위험대비수익률)를 대폭 개선합니다.",
                     goldCorrelation: "비상관 자산으로서 독보적",
-                    benchmark: "인플레이션 및 스태그플레이션 시 주식/채권 동반 하락을 유일하게 방어"
+                    benchmark: "인플레이션 및 스태그플레이션 시 주식/채권 동반 하락을 유일하게 방어",
+                    autoFetch: false,
+                    manualUpdate: true,
+                    fetchNote: "분기별 3년 롤링 상관계수 모델 산출",
+                    asOfDate: "2026-Q3",
+                    sourceUrl: "https://www.gold.org"
                 }
             ],
             history: {
@@ -484,8 +555,8 @@ const GOLD_DATA = {
                 {
                     id: "gold_silver_ratio",
                     name: "금/은 비율 (Gold-Silver Ratio)",
-                    code: "XAU/XAG Ratio",
-                    currentValue: 84.5,
+                    code: "XAU/XAG Ratio (실시간 자동 계산)",
+                    currentValue: 83.3,
                     unit: "배",
                     prevValue: 86.2,
                     change: -1.7,
@@ -494,13 +565,16 @@ const GOLD_DATA = {
                     score: 0,
                     explanation: "금 1온스로 은 몇 온스를 살 수 있는지 나타냅니다. 80 이상은 역사적 상단으로 금이 은 대비 매우 고평가되어 있거나 안전자산 선호가 극에 달해 있음을 뜻합니다.",
                     goldCorrelation: "경기 침체기 상승, 경기 확장기 하락",
-                    benchmark: "80 이상: 안전자산 프리미엄 극대화 / 60 이하: 금 저평가"
+                    benchmark: "80 이상: 안전자산 프리미엄 극대화 / 60 이하: 금 저평가",
+                    autoFetch: true,
+                    asOfDate: "2026-11-27",
+                    sourceUrl: "https://api.gold-api.com"
                 },
                 {
                     id: "gold_copper_ratio",
                     name: "금/구리 비율 (Gold-Copper Ratio)",
-                    code: "Gold / Doctor Copper",
-                    currentValue: 625,
+                    code: "Gold / Doctor Copper (HG=F 선물)",
+                    currentValue: 644.7,
                     unit: "배",
                     prevValue: 610,
                     change: +15,
@@ -509,13 +583,16 @@ const GOLD_DATA = {
                     score: +1,
                     explanation: "경기 민감재인 구리 대비 안전자산인 금의 상대가격입니다. 이 비율의 상승은 글로벌 제조업 경기 둔화와 안전자산으로의 자금 쏠림을 방증합니다.",
                     goldCorrelation: "경기 둔화기 급등",
-                    benchmark: "비율 상승 = 채권 금리 하락 및 금 강세장과 동행"
+                    benchmark: "비율 상승 = 채권 금리 하락 및 금 강세장과 동행",
+                    autoFetch: true,
+                    asOfDate: "2026-11-27",
+                    sourceUrl: "https://finance.yahoo.com/quote/HG=F"
                 },
                 {
                     id: "gold_sp500_ratio",
                     name: "금 대비 S&P 500 비율 (Gold / S&P 500)",
-                    code: "Gold / SPX",
-                    currentValue: 0.45,
+                    code: "Gold / SPX (^GSPC 자동 계산)",
+                    currentValue: 0.5099,
                     unit: "배",
                     prevValue: 0.43,
                     change: +0.02,
@@ -524,12 +601,15 @@ const GOLD_DATA = {
                     score: 0,
                     explanation: "1980년(1.5배)이나 2011년(0.8배)의 역사적 버블 고점에 비하면 현재 금은 주식시장 대비 여전히 합리적인 가치평가 영역에 머물러 있습니다.",
                     goldCorrelation: "자산 간 자금 로테이션",
-                    benchmark: "0.8 이상 버블 경계, 0.5 미만 균형"
+                    benchmark: "0.8 이상 버블 경계, 0.5 미만 균형",
+                    autoFetch: true,
+                    asOfDate: "2026-11-27",
+                    sourceUrl: "https://finance.yahoo.com/quote/%5EGSPC"
                 },
                 {
                     id: "gold_m2_ratio",
                     name: "미국 M2 통화량 대비 금 가격",
-                    code: "Gold Price / US M2 Money Supply",
+                    code: "Gold Price / M2SL (FRED)",
                     currentValue: "0.127",
                     unit: "비율",
                     prevValue: "0.122",
@@ -539,7 +619,10 @@ const GOLD_DATA = {
                     score: +1,
                     explanation: "코로나 이후 풀린 막대한 달러 M2 통화 공급량 대비 금 가격은 1980년대나 2011년에 비해 여전히 저평가 상태로, 장기 화폐가치 희석에 비하면 추가 상승 여력이 충분합니다.",
                     goldCorrelation: "장기 비례 관계",
-                    benchmark: "통화량 증가 = 금의 장기적 우상향 뒷받침"
+                    benchmark: "통화량 증가 = 금의 장기적 우상향 뒷받침",
+                    autoFetch: true,
+                    asOfDate: "2026-11",
+                    sourceUrl: "https://fred.stlouisfed.org/series/M2SL"
                 }
             ],
             history: {

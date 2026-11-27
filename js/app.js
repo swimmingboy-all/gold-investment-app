@@ -446,13 +446,21 @@ const App = {
         const badgeColor = isBullish ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : (isBearish ? 'bg-rose-500/10 text-rose-400 border-rose-500/30' : 'bg-slate-700/50 text-slate-300 border-slate-600');
         const badgeText = isBullish ? '금 상승 호재 (+)' : (isBearish ? '금 하방 압력 (-)' : '중립 (Neutral)');
 
+        // 자동 수집 vs 정기 공시(수동) 배지
+        const autoBadge = ind.autoFetch 
+            ? `<span class="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 font-medium"><i data-lucide="zap" class="w-2.5 h-2.5"></i>자동 수집</span>`
+            : `<span class="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/30 font-medium"><i data-lucide="clock" class="w-2.5 h-2.5"></i>정기 공시</span>`;
+
         return `
             <div class="bg-slate-800/40 border border-slate-700/50 rounded-xl p-4 flex flex-col justify-between hover:border-amber-500/40 transition">
                 <div>
                     <div class="flex items-start justify-between gap-2 mb-2">
-                        <div>
-                            <span class="text-[10px] text-amber-400/80 font-mono tracking-wider">${ind.code}</span>
-                            <h5 class="text-sm font-bold text-white">${ind.name}</h5>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-1.5 flex-wrap mb-1">
+                                <span class="text-[10px] text-amber-400/80 font-mono tracking-wider">${ind.code}</span>
+                                ${autoBadge}
+                            </div>
+                            <h5 class="text-sm font-bold text-white truncate" title="${ind.name}">${ind.name}</h5>
                         </div>
                         <span class="text-[11px] px-2 py-0.5 rounded-full border ${badgeColor} font-semibold shrink-0">
                             ${badgeText}
@@ -473,6 +481,7 @@ const App = {
                 <div class="pt-2 border-t border-slate-700/40 text-[11px] text-slate-400 flex flex-col gap-1">
                     <div><span class="text-slate-500">금 상관성:</span> <strong class="text-slate-300">${ind.goldCorrelation}</strong></div>
                     <div><span class="text-slate-500">판단 기준:</span> <span class="text-amber-300/80">${ind.benchmark}</span></div>
+                    ${ind.fetchNote ? `<div class="text-[10px] text-amber-400/70 bg-amber-500/5 px-2 py-1 rounded border border-amber-500/20"><span class="font-semibold">참고:</span> ${ind.fetchNote}</div>` : ''}
                     <div class="flex items-center justify-between mt-1 pt-1 border-t border-slate-700/30">
                         <span class="text-slate-500">기준일: <span class="text-slate-400 font-medium">${ind.asOfDate || '최근 공시'}</span></span>
                         ${ind.sourceUrl ? `<a href="${ind.sourceUrl}" target="_blank" rel="noopener noreferrer" class="text-cyan-400 hover:text-cyan-300 hover:underline flex items-center gap-1 transition">출처 <i data-lucide="external-link" class="w-3 h-3 inline-block"></i></a>` : ''}
