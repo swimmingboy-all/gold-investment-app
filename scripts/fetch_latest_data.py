@@ -333,6 +333,35 @@ def fetch_gold_price():
         return p2
     return None
 
+def fetch_gold_ranges(current_gold):
+    """최근 3개월, 6개월, 1년간 금 최고가/최저가 및 레인지 통계 수집"""
+    url = "https://query1.finance.yahoo.com/v8/finance/chart/GC=F?range=1y&interval=1d"
+    headers = {'User-Agent': 'Mozilla/5.0'}
+    data = fetch_json(url, headers=headers, timeout=10)
+    if not data:
+        return None
+    try:
+        quote = data['chart']['result'][0]['indicators']['quote'][0]
+        highs = [h for h in quote['high'] if h is not None]
+        lows = [l for l in quote['low'] if l is not None]
+        closes = [c for c in quote['close'] if c is not None]
+        curr = current_gold or (closes[-1] if closes else 3655.0)
+
+        ranges = {
+            "3m": {"high": round(max(highs[-63:]), 1), "low": round(min(lows[-63:]), 1)},
+            "6m": {"high": round(max(highs[-126:]), 1), "low": round(min(lows[-126:]), 1)},
+            "1y": {"high": round(max(highs), 1), "low": round(min(lows), 1)}
+        }
+        for k, v in ranges.items():
+            v['vsHigh'] = round(((curr / v['high']) - 1) * 100, 1)
+            v['vsLow'] = round(((curr / v['low']) - 1) * 100, 1)
+            v['pos'] = round(((curr - v['low']) / (v['high'] - v['low'])) * 100, 1)
+        print(f"  [OK] 금값 기간별 레인지 (GC=F): 3M({ranges['3m']['vsHigh']}%), 6M({ranges['6m']['vsHigh']}%), 1Y({ranges['1y']['vsHigh']}%)")
+        return ranges
+    except Exception as e:
+        print(f"  [WARN] 금값 레인지 파싱 실패: {e}")
+        return None
+
 def fetch_silver_price():
     data = fetch_json("https://api.gold-api.com/price/XAG")
     if data and data.get('price') and data['price'] > 5:
@@ -374,7 +403,7 @@ def set_field(content, indicator_id, field_name, new_value, is_string=False):
 def update_asofdate(content, indicator_id, date_str):
     return set_field(content, indicator_id, 'asOfDate', date_str, is_string=True)
 
-def apply_all_updates(rates, gold, silver, krw, dxy, vix, copper, sp500, cot_net, cot_date, etf_tons, macro):
+def apply_all_updates(rates, gold, silver, krw, dxy, vix, copper, sp500, cot_net, cot_date, etf_tons, macro, gold_ranges=None):
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     file_path = os.path.join(base_dir, 'js', 'indicatorsData.js')
 
@@ -407,6 +436,9 @@ def apply_all_updates(rates, gold, silver, krw, dxy, vix, copper, sp500, cot_net
         content = re.sub(r'us10yTips:\s*[\d\.]+', f'us10yTips: {rates["tips10y"]}', content)
     if dxy:
         content = re.sub(r'dxy:\s*[\d\.]+', f'dxy: {dxy}', content)
+    if gold_ranges:
+        ranges_formatted = json.dumps(gold_ranges, indent=12)
+        content = re.sub(r'ranges:\s*\{[\s\S]*?\n\s{8}\}', f'ranges: {ranges_formatted}', content)
     content = re.sub(r'updatedAt:\s*"[^"]*"', f'updatedAt: "{now_str}"', content)
 
     # 2. 1. 실질금리 & 연준 기준금리
@@ -528,6 +560,7 @@ if __name__ == '__main__':
     gold = fetch_gold_price()
     silver = fetch_silver_price()
     krw, cny = fetch_fx()
+    gold_ranges = fetch_gold_ranges(gold)
 
     print("\n[4/6] Yahoo Finance 시장 데이터 수집 (DXY, VIX, 구리, S&P500, ETF)...")
     dxy = fetch_yahoo_quote('DX-Y.NYB')
@@ -544,7 +577,7 @@ if __name__ == '__main__':
     macro = fetch_fred_labor_and_macro()
 
     print("\n[6/6] js/indicatorsData.js 파일 갱신...")
-    apply_all_updates(rates, gold, silver, krw, dxy, vix, copper, sp500, cot_net, cot_date, etf_tons, macro)
+    apply_all_updates(rates, gold, silver, krw, dxy, vix, copper, sp500, cot_net, cot_date, etf_tons, macro, gold_ranges)
 
     print("\n" + "=" * 65)
     print("수집 완료 현황 요약")

@@ -6,14 +6,38 @@
 const GOLD_DATA = {
     // 현재 금 시세 정보 (2024~2026 트렌드 반영)
     meta: {
-        goldUSD: 3655.0, // 온스당 USD
-        goldKRW_g: 157911, // g당 원화 가격
-        goldKRW_don: 592166, // 돈(3.75g)당 원화 가격
+        goldUSD: 3662.0, // 온스당 USD
+        goldKRW_g: 158214, // g당 원화 가격
+        goldKRW_don: 593302, // 돈(3.75g)당 원화 가격
         usdkrw: 1343.8,
-        dxy: 103.754,
+        dxy: 103.714,
         us10y: 4.85,
         us10yTips: 2.73,
-        updatedAt: "2026-11-27 16:43:50 KST (공식 원천 데이터 실시간 동기화)"
+        updatedAt: "2026-11-27 17:10:13 KST (공식 원천 데이터 실시간 동기화)",
+        // 최근 3개월 / 6개월 / 1년간 최고·최저 금값 및 레인지 통계
+        ranges: {
+            "3m": {
+                        "high": 4558.5,
+                        "low": 3425.2,
+                        "vsHigh": -19.7,
+                        "vsLow": 6.9,
+                        "pos": 20.9
+            },
+            "6m": {
+                        "high": 4755.0,
+                        "low": 3425.2,
+                        "vsHigh": -23.0,
+                        "vsLow": 6.9,
+                        "pos": 17.8
+            },
+            "1y": {
+                        "high": 5586.2,
+                        "low": 3425.2,
+                        "vsHigh": -34.4,
+                        "vsLow": 6.9,
+                        "pos": 11.0
+            }
+}
     },
 
     // 8대 카테고리 정의 및 지표 항목
@@ -118,7 +142,7 @@ const GOLD_DATA = {
                     id: "dxy",
                     name: "무역가중 달러지수 (DXY 대용, DTWEXBGS)",
                     code: "DTWEXBGS (FRED)",
-                    currentValue: 103.754,
+                    currentValue: 103.714,
                     unit: "pt",
                     prevValue: 105.8,
                     change: -1.7,
@@ -190,7 +214,7 @@ const GOLD_DATA = {
                     id: "etf_holdings",
                     name: "주요 금 ETF 보유량 (GLD+IAU+GLDM)",
                     code: "Yahoo Finance (GLD/IAU/GLDM 발행주수)",
-                    currentValue: 1609,
+                    currentValue: 1606,
                     unit: "톤",
                     prevValue: 3120,
                     change: +140,
@@ -573,7 +597,7 @@ const GOLD_DATA = {
                     id: "gold_copper_ratio",
                     name: "금/구리 비율 (Gold-Copper Ratio)",
                     code: "Gold / Doctor Copper (HG=F 선물)",
-                    currentValue: 642.4,
+                    currentValue: 643.8,
                     unit: "배",
                     prevValue: 610,
                     change: +15,
@@ -591,7 +615,7 @@ const GOLD_DATA = {
                     id: "gold_sp500_ratio",
                     name: "금 대비 S&P 500 비율 (Gold / S&P 500)",
                     code: "Gold / SPX (^GSPC 자동 계산)",
-                    currentValue: 0.5089,
+                    currentValue: 0.5098,
                     unit: "배",
                     prevValue: 0.43,
                     change: +0.02,

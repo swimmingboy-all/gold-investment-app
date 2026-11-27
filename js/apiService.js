@@ -248,6 +248,7 @@ const GoldApiService = {
                     goldKRW_g: GOLD_DATA.meta.goldKRW_g,
                     goldKRW_don: GOLD_DATA.meta.goldKRW_don,
                     usdkrw: GOLD_DATA.meta.usdkrw,
+                    ranges: GOLD_DATA.meta.ranges,
                     updatedAt: GOLD_DATA.meta.updatedAt
                 },
                 savedAt: new Date().toISOString()
@@ -282,6 +283,9 @@ const GoldApiService = {
                         usdkrwInd.currentValue = saved.meta.usdkrw;
                     }
                 }
+            }
+            if (saved.meta.ranges) {
+                GOLD_DATA.meta.ranges = saved.meta.ranges;
             }
             if (saved.meta.updatedAt) {
                 GOLD_DATA.meta.updatedAt = saved.meta.updatedAt.includes('저장됨') 

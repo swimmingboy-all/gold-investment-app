@@ -176,10 +176,109 @@ const App = {
 
     renderAll() {
         try { this.renderTicker(); } catch (e) { console.error('renderTicker error:', e); }
+        try { this.renderGoldPriceRanges(); } catch (e) { console.error('renderGoldPriceRanges error:', e); }
         try { this.renderScoreAndSignal(); } catch (e) { console.error('renderScoreAndSignal error:', e); }
         try { this.renderSummaryMatrix(); } catch (e) { console.error('renderSummaryMatrix error:', e); }
         try { this.renderCategoryCards(); } catch (e) { console.error('renderCategoryCards error:', e); }
         try { this.renderCalendarAndTips(); } catch (e) { console.error('renderCalendarAndTips error:', e); }
+    },
+
+    /**
+     * 최근 3개월 / 6개월 / 1년간 최고·최저 금값 대비 % 수준 및 레인지 위치 렌더링
+     */
+    renderGoldPriceRanges() {
+        const grid = document.getElementById('gold-price-ranges-grid');
+        if (!grid) return;
+
+        const meta = GOLD_DATA.meta;
+        const currGold = meta.goldUSD || 3655.0;
+        const currentEl = document.getElementById('range-current-gold');
+        if (currentEl) currentEl.textContent = `$${currGold.toLocaleString()}/oz`;
+
+        const ranges = meta.ranges || {
+            "3m": { high: 4558.5, low: 3425.2 },
+            "6m": { high: 4755.0, low: 3425.2 },
+            "1y": { high: 5586.2, low: 3425.2 }
+        };
+
+        const round = (num, dec) => Math.round(num * Math.pow(10, dec)) / Math.pow(10, dec);
+
+        const periods = [
+            { key: "3m", label: "최근 3개월 (3M)", badge: "단기 레인지" },
+            { key: "6m", label: "최근 6개월 (6M)", badge: "중기 레인지" },
+            { key: "1y", label: "최근 1년간 (1Y)", badge: "장기 52주 레인지" }
+        ];
+
+        grid.innerHTML = periods.map(p => {
+            const r = ranges[p.key] || { high: 4000, low: 3000 };
+            const high = r.high;
+            const low = r.low;
+
+            // 실시간 재계산
+            const vsHigh = round(((currGold / high) - 1) * 100, 1);
+            const vsLow = round(((currGold / low) - 1) * 100, 1);
+            let pos = round(((currGold - low) / (high - low)) * 100, 1);
+            if (pos < 0) pos = 0;
+            if (pos > 100) pos = 100;
+
+            // 레인지 위치 판정
+            let posLabel = "중간 중립권";
+            let posColor = "text-amber-400";
+            let barColor = "bg-amber-400";
+            if (pos <= 25) {
+                posLabel = "저점 바닥권 (매수 유망)";
+                posColor = "text-emerald-400";
+                barColor = "bg-emerald-400";
+            } else if (pos <= 45) {
+                posLabel = "중하단 눌림목";
+                posColor = "text-emerald-300";
+                barColor = "bg-emerald-500";
+            } else if (pos >= 75) {
+                posLabel = "고점 과열권 (차익실현 경계)";
+                posColor = "text-rose-400";
+                barColor = "bg-rose-500";
+            }
+
+            return `
+                <div class="bg-slate-900/90 p-3.5 rounded-xl border border-slate-800 hover:border-amber-500/30 transition flex flex-col justify-between shadow-inner">
+                    <div>
+                        <div class="flex items-center justify-between mb-2 pb-1.5 border-b border-slate-800/80">
+                            <span class="text-xs font-bold text-white tracking-tight">
+                                ${p.label}
+                            </span>
+                            <span class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700/60 font-medium">
+                                ${p.badge}
+                            </span>
+                        </div>
+
+                        <!-- 최고가 & 최저가 -->
+                        <div class="grid grid-cols-2 gap-2 text-xs mb-3">
+                            <div class="bg-slate-800/50 p-2 rounded-lg border border-slate-700/40">
+                                <span class="text-[10px] text-slate-400 block mb-0.5">기간 최저가</span>
+                                <strong class="text-emerald-400 font-bold font-mono text-xs">$${low.toLocaleString()}</strong>
+                                <span class="text-[10px] text-emerald-400 block mt-0.5 font-semibold">최저 대비 +${vsLow}%</span>
+                            </div>
+                            <div class="bg-slate-800/50 p-2 rounded-lg border border-slate-700/40">
+                                <span class="text-[10px] text-slate-400 block mb-0.5">기간 최고가</span>
+                                <strong class="text-rose-400 font-bold font-mono text-xs">$${high.toLocaleString()}</strong>
+                                <span class="text-[10px] text-rose-400 block mt-0.5 font-semibold">최고 대비 ${vsHigh}%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 레인지 내 현재 위치 프로그레스 바 -->
+                    <div class="pt-2 border-t border-slate-800/60">
+                        <div class="flex justify-between items-center text-[11px] mb-1">
+                            <span class="text-slate-400">레인지 위치:</span>
+                            <strong class="${posColor} font-bold font-mono">${pos}% <span class="text-[10px] font-medium text-slate-400">(${posLabel})</span></strong>
+                        </div>
+                        <div class="w-full bg-slate-800/80 h-2 rounded-full overflow-hidden p-0.5 border border-slate-700/50">
+                            <div class="${barColor} h-full rounded-full transition-all duration-700" style="width: ${pos}%"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
     },
 
     renderTicker() {
