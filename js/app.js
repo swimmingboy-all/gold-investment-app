@@ -491,29 +491,164 @@ const App = {
         `;
     },
 
+    /**
+     * 주요 경제지표 발표 캘린더 자동 롤오버 및 실시간 D-Day 계산
+     */
+    getDynamicCalendarEvents() {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        // 연준 FOMC 공식 회의 일정 목록 (2026~2027)
+        const fomcDates = [
+            "2026-01-28", "2026-03-18", "2026-05-06", "2026-06-17",
+            "2026-07-29", "2026-09-16", "2026-11-04", "2026-12-09",
+            "2027-01-27", "2027-03-17", "2027-05-05", "2027-06-16",
+            "2027-07-28", "2027-09-15", "2027-11-03", "2027-12-15"
+        ];
+
+        // WGC 분기 보고서 발표 일정 (1월 말, 4월 말, 7월 말, 10월 말)
+        const wgcDates = [
+            "2026-01-30", "2026-04-30", "2026-07-30", "2026-10-29",
+            "2027-01-28", "2027-04-29", "2027-07-29", "2027-10-28"
+        ];
+
+        // 매월 첫 번째 금요일 (비농업 고용보고서 NFP) 계산 함수
+        const getFirstFriday = (year, monthIdx) => {
+            for (let d = 1; d <= 7; d++) {
+                const dt = new Date(year, monthIdx, d);
+                if (dt.getDay() === 5) return dt;
+            }
+            return new Date(year, monthIdx, 1);
+        };
+
+        // 다가오는 NFP 일정 찾기
+        let nfpDate = getFirstFriday(today.getFullYear(), today.getMonth());
+        nfpDate.setHours(0, 0, 0, 0);
+        if (nfpDate < today) {
+            // 이번 달 첫째 금요일이 지났으면 다음 달 첫째 금요일로 롤오버
+            nfpDate = getFirstFriday(today.getFullYear(), today.getMonth() + 1);
+            nfpDate.setHours(0, 0, 0, 0);
+        }
+
+        // 다가오는 CPI 일정 계산 (매월 둘째 주 11~13일경)
+        const getCpiDate = (year, monthIdx) => {
+            const dt = new Date(year, monthIdx, 12);
+            if (dt.getDay() === 0) dt.setDate(11); // 일요일이면 금요일로
+            if (dt.getDay() === 6) dt.setDate(12); // 토요일
+            return dt;
+        };
+        let cpiDate = getCpiDate(today.getFullYear(), today.getMonth());
+        cpiDate.setHours(0, 0, 0, 0);
+        if (cpiDate < today) {
+            cpiDate = getCpiDate(today.getFullYear(), today.getMonth() + 1);
+            cpiDate.setHours(0, 0, 0, 0);
+        }
+
+        // 다가오는 PPI 일정 (CPI 다음날)
+        const ppiDate = new Date(cpiDate);
+        ppiDate.setDate(cpiDate.getDate() + 1);
+
+        // 다가오는 FOMC 일정 찾기
+        let nextFomc = fomcDates.find(d => new Date(d) >= today) || "2026-12-09";
+
+        // 다가오는 WGC 수요 보고서 일정 찾기
+        let nextWgc = wgcDates.find(d => new Date(d) >= today) || "2027-01-28";
+
+        const formatDate = (dt) => {
+            const pad = n => String(n).padStart(2, '0');
+            return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
+        };
+
+        const events = [
+            {
+                name: "미국 FOMC 기준금리 결정 & 기자회견",
+                date: nextFomc,
+                impact: "극도로 높음 (★★★★★)",
+                note: "연준 기준금리 인하/동결 여부 및 점도표(Dot Plot) 확인"
+            },
+            {
+                name: "미국 비농업 고용보고서 (NFP & 실업률)",
+                date: formatDate(nfpDate),
+                impact: "매우 높음 (★★★★)",
+                note: "노동시장 냉각 여부 및 연준 금리 경로 직결 (매월 첫째 금요일)"
+            },
+            {
+                name: "미국 소비자물가지수 (CPI YoY & MoM)",
+                date: formatDate(cpiDate),
+                impact: "매우 높음 (★★★★)",
+                note: "인플레이션 끈적임(Sticky) 확인 및 실질금리 영향"
+            },
+            {
+                name: "미국 생산자물가지수 (PPI YoY)",
+                date: formatDate(ppiDate),
+                impact: "보통 (★★★)",
+                note: "도매 물가 선행 파악 (CPI 발표 직후 발표)"
+            },
+            {
+                name: "WGC 글로벌 금 수요 트렌드 분기 보고서",
+                date: nextWgc,
+                impact: "높음 (★★★★)",
+                note: "전 세계 중앙은행 순매입량 및 기관 ETF 공식 집계"
+            }
+        ];
+
+        // 각 일정의 D-Day 실시간 계산
+        return events.map(evt => {
+            const evtDate = new Date(evt.date);
+            evtDate.setHours(0, 0, 0, 0);
+            const diffDays = Math.round((evtDate - today) / (1000 * 60 * 60 * 24));
+            return {
+                ...evt,
+                dDay: diffDays
+            };
+        }).sort((a, b) => a.dDay - b.dDay); // 가장 임박한 일정 순서로 정렬
+    },
+
     renderCalendarAndTips() {
         const tips = GOLD_DATA.practicalTips;
 
-        // 캘린더 렌더링
+        // 캘린더 렌더링 (실시간 D-Day 및 롤오버 엔진 적용)
         const calContainer = document.getElementById('economic-calendar-list');
         if (calContainer) {
-            calContainer.innerHTML = tips.calendar.map(item => `
-                <div class="flex items-center justify-between p-3 rounded-xl bg-slate-800/40 border border-slate-700/60 hover:border-amber-500/30 transition">
-                    <div class="flex items-center gap-3">
-                        <div class="w-11 h-11 rounded-lg bg-amber-500/10 border border-amber-500/20 flex flex-col items-center justify-center text-amber-400 font-bold shrink-0">
-                            <span class="text-[9px] uppercase font-mono tracking-tighter">D-Day</span>
-                            <span class="text-sm leading-none">D-${item.dDay}</span>
+            const dynamicEvents = this.getDynamicCalendarEvents();
+            calContainer.innerHTML = dynamicEvents.map(item => {
+                let dDayBadge = `D-${item.dDay}`;
+                let boxStyle = 'bg-amber-500/10 border-amber-500/20 text-amber-400';
+
+                if (item.dDay === 0) {
+                    dDayBadge = 'D-DAY';
+                    boxStyle = 'bg-rose-500/20 border-rose-500/50 text-rose-300 animate-pulse ring-1 ring-rose-500/50';
+                } else if (item.dDay === 1) {
+                    dDayBadge = 'D-1';
+                    boxStyle = 'bg-amber-500/20 border-amber-500/40 text-amber-300 font-black';
+                } else if (item.dDay < 0) {
+                    dDayBadge = '완료';
+                    boxStyle = 'bg-slate-700/40 border-slate-700 text-slate-400';
+                }
+
+                return `
+                    <div class="flex items-center justify-between p-3.5 rounded-xl bg-slate-800/40 border border-slate-700/60 hover:border-amber-500/30 transition">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 rounded-xl ${boxStyle} border flex flex-col items-center justify-center font-black shrink-0 shadow-inner">
+                                <span class="text-[9px] uppercase font-mono tracking-tighter opacity-80">D-Day</span>
+                                <span class="text-sm leading-none mt-0.5">${dDayBadge}</span>
+                            </div>
+                            <div>
+                                <h5 class="text-sm font-bold text-white flex items-center gap-2">
+                                    ${item.name}
+                                    ${item.dDay <= 3 && item.dDay >= 0 ? '<span class="text-[10px] px-1.5 py-0.2 rounded bg-rose-500/20 text-rose-400 border border-rose-500/30 animate-pulse">임박</span>' : ''}
+                                </h5>
+                                <p class="text-xs text-slate-400 mt-0.5">
+                                    <span class="text-amber-300/80 font-mono font-medium">${item.date}</span> • ${item.note}
+                                </p>
+                            </div>
                         </div>
-                        <div>
-                            <h5 class="text-sm font-semibold text-white">${item.name}</h5>
-                            <p class="text-xs text-slate-400">${item.date} • ${item.note}</p>
-                        </div>
+                        <span class="text-[11px] px-2.5 py-1 rounded-full ${item.impact.includes('높음') ? 'bg-rose-500/10 text-rose-300 border border-rose-500/30' : 'bg-slate-700/50 text-slate-300 border border-slate-600'} font-semibold shrink-0">
+                            ${item.impact}
+                        </span>
                     </div>
-                    <span class="text-[11px] px-2.5 py-1 rounded-full ${item.impact.includes('높음') ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40' : 'bg-slate-700 text-slate-300'} font-medium shrink-0">
-                        중요도: ${item.impact}
-                    </span>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
         // 우선순위 팁 렌더링
@@ -581,6 +716,8 @@ const App = {
             summaryView.classList.add('hidden');
             categoriesView.classList.add('hidden');
             calendarView.classList.remove('hidden');
+            this.renderCalendarAndTips();
+            if (window.lucide) lucide.createIcons();
         } else {
             // 특정 카테고리 탭 선택 시: 해당 카테고리 섹션만 선명하게 단독 표시!
             summaryView.classList.add('hidden');
