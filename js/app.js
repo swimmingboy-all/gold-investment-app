@@ -24,6 +24,12 @@ const App = {
     overrideValues: {},
 
     init() {
+        // 로컬스토리지에 저장된 최근 동기화 시세가 있으면 먼저 복원
+        const api = window.GoldApiService || (typeof GoldApiService !== 'undefined' ? GoldApiService : null);
+        if (api && api.loadFromLocalStorage) {
+            api.loadFromLocalStorage();
+        }
+
         this.currentWeights = { ...GoldScoringEngine.presets.balanced.weights };
         this.syncSimulatorSliders();
         this.bindEvents();
@@ -531,7 +537,7 @@ const App = {
 
             if (showFeedback) {
                 if (res.updatedItems && res.updatedItems.length > 0) {
-                    this.showToast('실시간 시세 갱신 완료', res.updatedItems.join('<br>'), true);
+                    this.showToast('실시간 시세 갱신 및 저장 완료', `${res.updatedItems.join('<br>')}<br><span class="text-amber-400 font-semibold mt-1 inline-block">💾 브라우저에 저장되어 새로고침 후에도 유지됩니다.</span>`, true);
                 } else {
                     this.showToast('동기화 결과 알림', '일부 시세 조회에 실패하여 기존 최신 데이터를 유지합니다.', false);
                 }
@@ -542,12 +548,21 @@ const App = {
                 this.showToast('동기화 오류', '실시간 데이터를 불러오는 중 오류가 발생했습니다: ' + (e.message || e), false);
             }
         } finally {
-            if (syncIcon) syncIcon.classList.remove('animate-spin');
-            if (syncBtn) {
-                syncBtn.classList.remove('opacity-75', 'cursor-not-allowed');
-                syncBtn.removeAttribute('disabled');
+            const btn = document.getElementById('sync-live-data-btn');
+            if (btn) {
+                btn.classList.remove('opacity-75', 'cursor-not-allowed');
+                btn.removeAttribute('disabled');
+                // Lucide 아이콘이나 SVG 내부의 모든 animate-spin 확실하게 제거
+                btn.querySelectorAll('.animate-spin').forEach(el => el.classList.remove('animate-spin'));
+            }
+            const icon = document.getElementById('sync-icon');
+            if (icon) {
+                icon.classList.remove('animate-spin');
             }
             setSafeText('sync-btn-text', '실시간 시세 동기화');
+            if (window.lucide) {
+                lucide.createIcons();
+            }
         }
     },
 

@@ -230,7 +230,71 @@ const GoldApiService = {
         const timeStr = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())} (실시간 갱신됨)`;
         GOLD_DATA.meta.updatedAt = timeStr;
 
+        // 동기화된 최신 시세를 브라우저에 영구 저장 (새로고침 시 유지)
+        this.saveToLocalStorage();
+
         return results;
+    },
+
+    /**
+     * 동기화된 실시간 시세를 브라우저 localStorage에 영구 보존
+     */
+    saveToLocalStorage() {
+        if (typeof localStorage === 'undefined') return;
+        try {
+            const dataToSave = {
+                meta: {
+                    goldUSD: GOLD_DATA.meta.goldUSD,
+                    goldKRW_g: GOLD_DATA.meta.goldKRW_g,
+                    goldKRW_don: GOLD_DATA.meta.goldKRW_don,
+                    usdkrw: GOLD_DATA.meta.usdkrw,
+                    updatedAt: GOLD_DATA.meta.updatedAt
+                },
+                savedAt: new Date().toISOString()
+            };
+            localStorage.setItem('gold_matrix_live_data', JSON.stringify(dataToSave));
+            console.log('[GoldApiService] 실시간 시세 데이터가 브라우저에 안전하게 저장되었습니다.');
+        } catch (e) {
+            console.warn('[GoldApiService] localStorage 저장 실패:', e);
+        }
+    },
+
+    /**
+     * 브라우저 시작 시 localStorage에 저장된 최근 동기화 시세를 복원
+     */
+    loadFromLocalStorage() {
+        if (typeof localStorage === 'undefined') return false;
+        try {
+            const raw = localStorage.getItem('gold_matrix_live_data');
+            if (!raw) return false;
+            const saved = JSON.parse(raw);
+            if (!saved || !saved.meta) return false;
+
+            // meta 복원
+            if (saved.meta.goldUSD) GOLD_DATA.meta.goldUSD = saved.meta.goldUSD;
+            if (saved.meta.goldKRW_g) GOLD_DATA.meta.goldKRW_g = saved.meta.goldKRW_g;
+            if (saved.meta.goldKRW_don) GOLD_DATA.meta.goldKRW_don = saved.meta.goldKRW_don;
+            if (saved.meta.usdkrw) {
+                GOLD_DATA.meta.usdkrw = saved.meta.usdkrw;
+                if (GOLD_DATA.categories && GOLD_DATA.categories.dollar) {
+                    const usdkrwInd = GOLD_DATA.categories.dollar.indicators.find(i => i.id === 'usdkrw');
+                    if (usdkrwInd) {
+                        usdkrwInd.currentValue = saved.meta.usdkrw;
+                    }
+                }
+            }
+            if (saved.meta.updatedAt) {
+                GOLD_DATA.meta.updatedAt = saved.meta.updatedAt.includes('저장됨') 
+                    ? saved.meta.updatedAt 
+                    : `${saved.meta.updatedAt} (저장된 시세)`;
+            }
+
+            console.log('[GoldApiService] 저장된 최근 시세를 복원했습니다:', saved.meta);
+            return true;
+        } catch (e) {
+            console.warn('[GoldApiService] localStorage 복원 실패:', e);
+            return false;
+        }
     }
 };
 
