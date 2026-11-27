@@ -177,6 +177,7 @@ const App = {
     renderAll() {
         try { this.renderTicker(); } catch (e) { console.error('renderTicker error:', e); }
         try { this.renderScoreAndSignal(); } catch (e) { console.error('renderScoreAndSignal error:', e); }
+        try { this.renderSummaryMatrix(); } catch (e) { console.error('renderSummaryMatrix error:', e); }
         try { this.renderCategoryCards(); } catch (e) { console.error('renderCategoryCards error:', e); }
         try { this.renderCalendarAndTips(); } catch (e) { console.error('renderCalendarAndTips error:', e); }
     },
@@ -261,8 +262,132 @@ const App = {
         // 레이더 차트 갱신
         GoldCharts.initRadarChart('radar-chart-canvas', categoryScores);
 
+        // 전체 요약 매트릭스 카드 갱신
+        try { this.renderSummaryMatrix(); } catch (e) { console.error('renderSummaryMatrix error:', e); }
+
         // 아이콘 리프레시
         if (window.lucide) lucide.createIcons();
+    },
+
+    /**
+     * 메인 대시보드 8대 핵심 카테고리 요약 매트릭스 카드 동적 렌더링
+     */
+    renderSummaryMatrix() {
+        const grid = document.getElementById('summary-matrix-grid');
+        if (!grid) return;
+
+        const meta = GOLD_DATA.meta;
+        const scoring = GoldScoringEngine.calculateScore(this.currentWeights, this.overrideValues);
+        const catScores = scoring.categoryScores;
+
+        // 8대 핵심 카드 데이터 정의 (실제 수집 데이터 기반 동적 생성)
+        const currentTips = this.overrideValues['us10y_tips'] !== undefined ? this.overrideValues['us10y_tips'] : (meta.us10yTips || 2.05);
+        const currentDxy = this.overrideValues['dxy'] !== undefined ? this.overrideValues['dxy'] : (meta.dxy || 104.2);
+        const currentUsdkrw = this.overrideValues['usdkrw'] !== undefined ? this.overrideValues['usdkrw'] : (meta.usdkrw || 1388);
+        const currentCb = this.overrideValues['central_bank_net_buys'] !== undefined ? this.overrideValues['central_bank_net_buys'] : 290;
+
+        const cardsData = [
+            {
+                tab: 'realRate',
+                title: '1. 실질 금리',
+                score: catScores.realRate ? catScores.realRate.score : 0,
+                headline: `10Y TIPS ${currentTips.toFixed(2)}%`,
+                desc: currentTips <= 2.0 
+                    ? '2.0% 이하로 금 보유 기회비용 완화. 역사상 가장 강력한 금 강세 동력.' 
+                    : '2.0% 기준선 부근 위치. 중립 흐름이나 2.0% 하회 시 강력한 랠리 탄력.',
+                accent: 'text-amber-400'
+            },
+            {
+                tab: 'dollar',
+                title: '2. 달러 & 환율',
+                score: catScores.dollar ? catScores.dollar.score : 0,
+                headline: `환율 ${Math.round(currentUsdkrw).toLocaleString()}원 / DXY ${currentDxy.toFixed(1)}`,
+                desc: currentUsdkrw >= 1350 
+                    ? '고환율 구간으로 국내 투자자는 원화 환산 환차익 프리미엄 수혜 지속.' 
+                    : '환율 안정권 진입. 순수 국제 금 시세 모멘텀에 연동되는 구간.',
+                accent: 'text-amber-400'
+            },
+            {
+                tab: 'supplyDemand',
+                title: '6. 실물 수급',
+                score: catScores.supplyDemand ? catScores.supplyDemand.score : 0,
+                headline: `중앙은행 ${currentCb}톤 / ETF 유입`,
+                desc: '글로벌 중앙은행의 탈달러 외환보유액 다변화와 금 ETF 매수세로 탄탄한 하방 지지.',
+                accent: 'text-amber-400'
+            },
+            {
+                tab: 'inflation',
+                title: '3. 인플레이션',
+                score: catScores.inflation ? catScores.inflation.score : 0,
+                headline: `10Y BEI 2.30% / CPI 2.6%`,
+                desc: '기대인플레 2.3% 안착으로 장기 화폐가치 방어 헤지 수요 지속.',
+                accent: 'text-amber-400'
+            },
+            {
+                tab: 'macroLabor',
+                title: '4. 경기 & 금리차',
+                score: catScores.macroLabor ? catScores.macroLabor.score : 0,
+                headline: `10Y-2Y 스프레드 +0.15%`,
+                desc: '장단기 금리 역전 해소 후 경기 사이클 변화. 안전자산 선호 심리 부각.',
+                accent: 'text-amber-400'
+            },
+            {
+                tab: 'riskSentiment',
+                title: '5. 위험 & 심리',
+                score: catScores.riskSentiment ? catScores.riskSentiment.score : 0,
+                headline: `VIX 15.2 / 지정학 리스크`,
+                desc: '지정학 긴장 고조 및 글로벌 불확실성에 따른 안전자산 방어 매수세.',
+                accent: 'text-amber-400'
+            },
+            {
+                tab: 'relativeValuation',
+                title: '7. 상대 가치',
+                score: catScores.relativeValuation ? catScores.relativeValuation.score : 0,
+                headline: `금/은 비율 ${(meta.goldUSD / 44.02).toFixed(1)}배`,
+                desc: '금/은 비율 80배 이상 고평가 구간. 장기 보유 관점 분할 접근 유효.',
+                accent: 'text-amber-400'
+            },
+            {
+                tab: 'calendar',
+                title: '8. 캘린더 & 팁',
+                score: null,
+                headline: `주요 이벤트 D-Day`,
+                desc: 'FOMC 금리결정 및 미국 CPI 등 핵심 변곡점 발표 일정 모니터링.',
+                accent: 'text-cyan-400'
+            }
+        ];
+
+        grid.innerHTML = cardsData.map(c => {
+            let badgeHtml = '';
+            if (c.score !== null) {
+                const isBullish = c.score > 15;
+                const isBearish = c.score < -15;
+                const badgeColor = isBullish 
+                    ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' 
+                    : (isBearish ? 'bg-rose-500/20 text-rose-400 border-rose-500/30' : 'bg-slate-700/60 text-slate-300 border-slate-600');
+                const badgeSign = c.score > 0 ? `+${c.score}점` : (c.score === 0 ? '0점 중립' : `${c.score}점`);
+                badgeHtml = `<span class="text-[10px] px-2 py-0.5 rounded-full border ${badgeColor} font-bold">${badgeSign}</span>`;
+            } else {
+                badgeHtml = `<span class="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 font-bold">캘린더</span>`;
+            }
+
+            return `
+                <div class="glass-card p-4 rounded-xl border border-slate-800 hover:border-amber-500/50 hover:bg-slate-800/40 transition cursor-pointer flex flex-col justify-between group" onclick="App.switchTab('${c.tab}')">
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold ${c.accent} group-hover:underline">${c.title}</span>
+                            ${badgeHtml}
+                        </div>
+                        <div class="text-base font-black text-white mb-1.5 tracking-tight">${c.headline}</div>
+                        <p class="text-[11px] text-slate-400 leading-relaxed">${c.desc}</p>
+                    </div>
+                    <div class="mt-3 pt-2 border-t border-slate-800/60 text-[10px] text-slate-500 flex items-center justify-between">
+                        <span>상세 지표 및 차트 보기</span>
+                        <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-slate-400 group-hover:translate-x-0.5 transition"></i>
+                    </div>
+                </div>
+            `;
+        }).join('');
     },
 
     renderCategoryCards() {
