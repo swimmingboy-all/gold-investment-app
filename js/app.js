@@ -473,6 +473,10 @@ const App = {
                 <div class="pt-2 border-t border-slate-700/40 text-[11px] text-slate-400 flex flex-col gap-1">
                     <div><span class="text-slate-500">금 상관성:</span> <strong class="text-slate-300">${ind.goldCorrelation}</strong></div>
                     <div><span class="text-slate-500">판단 기준:</span> <span class="text-amber-300/80">${ind.benchmark}</span></div>
+                    <div class="flex items-center justify-between mt-1 pt-1 border-t border-slate-700/30">
+                        <span class="text-slate-500">기준일: <span class="text-slate-400 font-medium">${ind.asOfDate || '최근 공시'}</span></span>
+                        ${ind.sourceUrl ? `<a href="${ind.sourceUrl}" target="_blank" rel="noopener noreferrer" class="text-cyan-400 hover:text-cyan-300 hover:underline flex items-center gap-1 transition">출처 <i data-lucide="external-link" class="w-3 h-3 inline-block"></i></a>` : ''}
+                    </div>
                 </div>
             </div>
         `;

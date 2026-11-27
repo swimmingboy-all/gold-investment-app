@@ -161,7 +161,9 @@ const GOLD_DATA = {
                     score: +2,
                     explanation: "중국 인민은행(PBoC), 인도 중앙은행(RBI), 폴란드, 튀르키예 등 신흥국 중앙은행들이 탈달러화 및 금융제재 리스크 방어를 위해 역사적 수준의 매입을 지속 중입니다.",
                     goldCorrelation: "강력한 구조적 정상관 (+0.80)",
-                    benchmark: "분기당 200톤 이상이면 매우 강한 매수 지지"
+                    benchmark: "분기당 200톤 이상이면 매우 강한 매수 지지",
+                    asOfDate: "2026-Q3",
+                    sourceUrl: "https://www.gold.org/goldhub/data/gold-demand-statistics"
                 },
                 {
                     id: "etf_holdings",
@@ -176,7 +178,9 @@ const GOLD_DATA = {
                     score: +2,
                     explanation: "금리 인하가 시작되면서 서구권 기관 및 개인 투자자들의 자금이 GLD, IAU 등 금 현물 ETF로 강력하게 순유입 전환되었습니다.",
                     goldCorrelation: "정상관 (+0.75)",
-                    benchmark: "월간 순유입 전환 시 시세 탄력 극대화"
+                    benchmark: "월간 순유입 전환 시 시세 탄력 극대화",
+                    asOfDate: "2026-11",
+                    sourceUrl: "https://www.gold.org/goldhub/data/gold-etf-flows"
                 },
                 {
                     id: "comex_cot",
@@ -191,7 +195,9 @@ const GOLD_DATA = {
                     score: +1,
                     explanation: "투기적 롱(Long) 포지션이 역사적 고점(30만 계약) 부근에서 소폭 차익실현으로 숨고르기를 보이고 있어 단기 과열 리스크가 해소되고 건강한 조정 국면입니다.",
                     goldCorrelation: "단기 모멘텀 지표 (과열 시 역발상 매도 신호)",
-                    benchmark: "28만 계약 이상 시 단기 과열 경계, 20만 이하 반등 매수"
+                    benchmark: "28만 계약 이상 시 단기 과열 경계, 20만 이하 반등 매수",
+                    asOfDate: "2026-11-19",
+                    sourceUrl: "https://www.cftc.gov/MarketReports/CommitmentsofTraders/index.htm"
                 },
                 {
                     id: "china_demand",
@@ -206,7 +212,9 @@ const GOLD_DATA = {
                     score: +1,
                     explanation: "중국 부동산 및 주식시장 부진으로 인해 중국 가계와 젊은 층의 금괴·금콩(Gold Beans) 실물 수요가 폭발적이며, 상하이 금거래소 프리미엄이 유지되고 있습니다.",
                     goldCorrelation: "정상관 (+0.60)",
-                    benchmark: "월 120톤 이상 인출 시 강력한 아시아 실물 바닥 형성"
+                    benchmark: "월 120톤 이상 인출 시 강력한 아시아 실물 바닥 형성",
+                    asOfDate: "2026-10",
+                    sourceUrl: "https://www.sge.com.cn/sjzx/mrgold"
                 },
                 {
                     id: "india_demand",
@@ -221,7 +229,9 @@ const GOLD_DATA = {
                     score: +1,
                     explanation: "인도 정부의 금 수입 관세 인하(15%→6%) 조치 이후 축제(디왈리) 및 결혼 시즌을 맞아 현지 거래 가격이 디스카운트에서 프리미엄으로 돌아섰습니다.",
                     goldCorrelation: "정상관 (+0.50)",
-                    benchmark: "국제 시세 대비 프리미엄(할증) 전환 시 인도 수요 강세"
+                    benchmark: "국제 시세 대비 프리미엄(할증) 전환 시 인도 수요 강세",
+                    asOfDate: "2026-Q3",
+                    sourceUrl: "https://www.gold.org/goldhub/research/gold-demands-trends"
                 },
                 {
                     id: "coin_bar_usmint",
@@ -236,7 +246,9 @@ const GOLD_DATA = {
                     score: +1,
                     explanation: "미국 조폐국 아메리칸 이글 및 캐나다 메이플리프 등 투자용 실물 코인/바 판매량이 꾸준히 증가하며 리테일 투자자 수요를 입증합니다.",
                     goldCorrelation: "정상관 (+0.45)",
-                    benchmark: "월 5만 온스 상회 시 강력한 개인 안전자산 수요"
+                    benchmark: "월 5만 온스 상회 시 강력한 개인 안전자산 수요",
+                    asOfDate: "2026-11",
+                    sourceUrl: "https://www.usmint.gov/about/production-sales-figures/american-eagles"
                 },
                 {
                     id: "lbma_comex_stocks",
@@ -251,7 +263,9 @@ const GOLD_DATA = {
                     score: +1,
                     explanation: "런던 금고 및 뉴욕 COMEX 창고의 실물 가용 재고가 아시아(중국/인도/중동)로의 지속적인 실물 인도로 인해 타이트해지고 있습니다.",
                     goldCorrelation: "역상관 (재고 감소 시 실물 프리미엄 상승)",
-                    benchmark: "서구 재고 감소 = 동양으로의 실물 이전 가속"
+                    benchmark: "서구 재고 감소 = 동양으로의 실물 이전 가속",
+                    asOfDate: "2026-11-22",
+                    sourceUrl: "https://www.lbma.org.uk/prices-and-data/lbma-vaults"
                 }
             ],
             history: {
