@@ -31,8 +31,13 @@
     </script>
     <!-- Lucide Icons CDN -->
     <script src="https://unpkg.com/lucide@latest"></script>
-    <!-- Chart.js CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Chart.js (로컬 번들 우선 + CDN 폴백) -->
+    <script src="js/chart.umd.min.js"></script>
+    <script>
+        if (typeof Chart === 'undefined') {
+            document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js"><\/script>');
+        }
+    </script>
     <!-- Custom CSS -->
     <link rel="stylesheet" href="css/style.css">
 </head>

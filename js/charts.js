@@ -23,7 +23,10 @@ const GoldCharts = {
      * 레이더 차트 (카테고리별 스코어 분포)
      */
     initRadarChart(canvasId, categoryScores) {
-        if (typeof Chart === 'undefined') return;
+        if (typeof Chart === 'undefined') {
+            console.warn('[GoldCharts] Chart.js가 로드되지 않았습니다.');
+            return;
+        }
         const ctx = document.getElementById(canvasId);
         if (!ctx) return;
 
@@ -31,7 +34,10 @@ const GoldCharts = {
             this.instances[canvasId].destroy();
         }
 
-        const labels = Object.values(categoryScores).map(c => c.name.split('.')[1] || c.name);
+        const labels = Object.values(categoryScores).map(c => {
+            const raw = c.name.split('.')[1] || c.name;
+            return raw.trim();
+        });
         const scores = Object.values(categoryScores).map(c => Math.max(-100, Math.min(100, c.score)));
 
         this.instances[canvasId] = new Chart(ctx, {
@@ -47,6 +53,7 @@ const GoldCharts = {
                     pointBorderColor: '#fff',
                     pointHoverBackgroundColor: '#fff',
                     pointHoverBorderColor: '#fbbf24',
+                    pointRadius: 4,
                     borderWidth: 2
                 }]
             },
@@ -59,12 +66,13 @@ const GoldCharts = {
                         grid: { color: this.theme.gridColor },
                         pointLabels: {
                             color: this.theme.textHighlight,
-                            font: { size: 11, family: 'Pretendard, -apple-system, sans-serif' }
+                            font: { size: 12, weight: 'bold', family: 'Pretendard, -apple-system, sans-serif' }
                         },
                         ticks: {
                             color: this.theme.textColor,
                             backdropColor: 'transparent',
-                            stepSize: 50
+                            stepSize: 50,
+                            callback: (val) => (val > 0 ? '+' : '') + val
                         },
                         min: -100,
                         max: 100
@@ -76,7 +84,7 @@ const GoldCharts = {
                     },
                     tooltip: {
                         callbacks: {
-                            label: (ctx) => ` 점수: ${ctx.raw}점 (${ctx.raw > 0 ? '상승 지지' : (ctx.raw < 0 ? '하방 압력' : '중립')})`
+                            label: (ctx) => ` 점수: ${(ctx.raw > 0 ? '+' : '') + ctx.raw}점 (${ctx.raw > 0 ? '상승 지지' : (ctx.raw < 0 ? '하방 압력' : '중립')})`
                         }
                     }
                 }
@@ -387,6 +395,8 @@ const GoldCharts = {
                 plugins: { legend: { labels: { color: this.theme.textColor } } }
             }
         });
+    },
+
     /**
      * 인플레이션: CPI vs Core PCE 시계열 차트
      */
