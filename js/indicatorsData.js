@@ -563,6 +563,9 @@ const GOLD_DATA = {
 };
 
 // 브라우저 및 Node 환경 지원
+if (typeof window !== 'undefined') {
+    window.GOLD_DATA = GOLD_DATA;
+}
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = GOLD_DATA;
 }

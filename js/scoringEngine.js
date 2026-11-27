@@ -275,6 +275,9 @@ const GoldScoringEngine = {
     }
 };
 
+if (typeof window !== 'undefined') {
+    window.GoldScoringEngine = GoldScoringEngine;
+}
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = GoldScoringEngine;
 }

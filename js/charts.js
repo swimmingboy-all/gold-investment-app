@@ -529,6 +529,9 @@ const GoldCharts = {
     }
 };
 
+if (typeof window !== 'undefined') {
+    window.GoldCharts = GoldCharts;
+}
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = GoldCharts;
 }

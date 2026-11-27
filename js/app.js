@@ -448,19 +448,36 @@ const App = {
     },
 
     async triggerLiveSync(showFeedback = true) {
-        if (!window.GoldApiService) return;
-
         const syncBtn = document.getElementById('sync-live-data-btn');
         const syncIcon = document.getElementById('sync-icon');
         
+        // 즉각적인 시각 피드백 (버튼 상태 변경 및 스피너)
         if (syncIcon) syncIcon.classList.add('animate-spin');
         if (syncBtn) {
-            syncBtn.classList.add('opacity-80');
+            syncBtn.classList.add('opacity-75', 'cursor-not-allowed');
             syncBtn.setAttribute('disabled', 'true');
+        }
+        setSafeText('sync-btn-text', '동기화 중...');
+
+        const api = window.GoldApiService || (typeof GoldApiService !== 'undefined' ? GoldApiService : null);
+        if (!api) {
+            console.error('GoldApiService not found');
+            this.showToast('동기화 불가', '시세 API 모듈을 불러오지 못했습니다. 브라우저를 새로고침(Ctrl+F5) 해주세요.', false);
+            if (syncIcon) syncIcon.classList.remove('animate-spin');
+            if (syncBtn) {
+                syncBtn.classList.remove('opacity-75', 'cursor-not-allowed');
+                syncBtn.removeAttribute('disabled');
+            }
+            setSafeText('sync-btn-text', '실시간 시세 동기화');
+            return;
+        }
+
+        if (showFeedback) {
+            this.showToast('시세 동기화 시작', '국제 금/은 시세 및 원/달러 실시간 환율을 조회 중입니다...', true);
         }
 
         try {
-            const res = await GoldApiService.syncAllLiveData();
+            const res = await api.syncAllLiveData();
             this.renderAll();
 
             // 갱신된 수치 엘리먼트에 플래시 애니메이션 효과 부여
@@ -474,23 +491,24 @@ const App = {
             });
 
             if (showFeedback) {
-                if (res.updatedItems.length > 0) {
+                if (res.updatedItems && res.updatedItems.length > 0) {
                     this.showToast('실시간 시세 갱신 완료', res.updatedItems.join('<br>'), true);
                 } else {
-                    this.showToast('동기화 실패', '네트워크 연결을 확인해주세요. 기본 데이터셋이 유지됩니다.', false);
+                    this.showToast('동기화 결과 알림', '일부 시세 조회에 실패하여 기존 최신 데이터를 유지합니다.', false);
                 }
             }
         } catch (e) {
             console.error('동기화 오류:', e);
             if (showFeedback) {
-                this.showToast('동기화 오류', '실시간 데이터를 불러오는 중 오류가 발생했습니다.', false);
+                this.showToast('동기화 오류', '실시간 데이터를 불러오는 중 오류가 발생했습니다: ' + (e.message || e), false);
             }
         } finally {
             if (syncIcon) syncIcon.classList.remove('animate-spin');
             if (syncBtn) {
-                syncBtn.classList.remove('opacity-80');
+                syncBtn.classList.remove('opacity-75', 'cursor-not-allowed');
                 syncBtn.removeAttribute('disabled');
             }
+            setSafeText('sync-btn-text', '실시간 시세 동기화');
         }
     },
 
